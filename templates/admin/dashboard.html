@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Vendora{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+    .stat-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .trend-up {
+        color: #10b981;
+    }
+    .trend-down {
+        color: #ef4444;
+    }
+    .trend-stable {
+        color: #6b7280;
+    }
+    .progress-bar {
+        transition: width 0.3s ease;
+    }
+    .health-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    .health-good {
+        background-color: #10b981;
+    }
+    .health-warning {
+        background-color: #f59e0b;
+    }
+    .health-error {
+        background-color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
+        <p class="text-gray-600">System Overview & Monitoring</p>
+    </div>
+
+    <!-- System Overview Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <!-- Total Users -->
+        <div class="bg-white rounded-lg shadow-md p-6 stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-blue-100 p-3 rounded-lg">
+                    <span class="material-icons text-blue-600 text-2xl">group</span>
+                </div>
+                <div class="flex items-center text-sm {% if users_growth > 0 %}trend-up{% elif users_growth < 0 %}trend-down{% else %}trend-stable{% endif %}">
+                    <span class="material-icons text-sm mr-1">{% if users_growth > 0 %}trending_up{% elif users_growth < 0 %}trending_down{% else %}remove{% endif %}</span>
+                    <span>{{ "%.0f"|format(users_growth) }}% this month</span>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-1">{{ "{:,}".format(total_users) }}</h3>
+            <p class="text-sm text-gray-600">Total Users</p>
+        </div>
+
+        <!-- Active Vendors -->
+        <div class="bg-white rounded-lg shadow-md p-6 stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-green-100 p-3 rounded-lg">
+                    <span class="material-icons text-green-600 text-2xl">storefront</span>
+                </div>
+                <div class="flex items-center text-sm trend-up">
+                    <span class="material-icons text-sm mr-1">trending_up</span>
+                    <span>{{ vendors_today }} new today</span>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-1">{{ "{:,}".format(active_vendors) }}</h3>
+            <p class="text-sm text-gray-600">Active Vendors</p>
+        </div>
+
+        <!-- Total Orders -->
+        <div class="bg-white rounded-lg shadow-md p-6 stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-purple-100 p-3 rounded-lg">
+                    <span class="material-icons text-purple-600 text-2xl">receipt_long</span>
+                </div>
+                <div class="flex items-center text-sm {% if orders_growth > 0 %}trend-up{% elif orders_growth < 0 %}trend-down{% else %}trend-stable{% endif %}">
+                    <span class="material-icons text-sm mr-1">{% if orders_growth > 0 %}trending_up{% elif orders_growth < 0 %}trending_down{% else %}remove{% endif %}</span>
+                    <span>{% if orders_growth > 0 %}+{{ "%.0f"|format(orders_growth) }}%{% elif orders_growth < 0 %}{{ "%.0f"|format(orders_growth) }}%{% else %}stable{% endif %}</span>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-1">{{ total_orders_formatted }}</h3>
+            <p class="text-sm text-gray-600">Total Orders</p>
+        </div>
+
+        <!-- System Health -->
+        <div class="bg-white rounded-lg shadow-md p-6 stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="bg-yellow-100 p-3 rounded-lg">
+                    <span class="material-icons text-yellow-600 text-2xl">monitoring</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="health-indicator health-good"></span>
+                    <span class="text-sm text-gray-600">All Systems Operational</span>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-1">Healthy</h3>
+            <p class="text-sm text-gray-600">System Health</p>
+        </div>
+    </div>
+
+    <!-- System Health Details -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+            <span class="material-icons mr-2 text-gray-600">monitoring</span>
+            System Health
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-600">Database</span>
+                    <span class="text-sm font-semibold text-gray-800">{{ db_latency_ms }}ms latency</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full progress-bar" style="width: {% if db_latency_ms < 100 %}100{% elif db_latency_ms < 200 %}80{% else %}60{% endif %}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-600">API Server</span>
+                    <span class="text-sm font-semibold text-gray-800">{{ api_uptime }}% uptime</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full progress-bar" style="width: {{ api_uptime }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-600">Storage</span>
+                    <span class="text-sm font-semibold text-gray-800">{{ storage_used }}% used</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="{% if storage_used < 50 %}bg-green-500{% elif storage_used < 80 %}bg-yellow-500{% else %}bg-red-500{% endif %} h-2 rounded-full progress-bar" style="width: {{ storage_used }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Recent Vendor Applications -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Recent Vendor Applications</h2>
+                <a href="{{ url_for('admin.vendors', status='PENDING') }}" class="text-primary hover:text-primary-dark text-sm font-medium">
+                    View All
+                </a>
+            </div>
+            {% if recent_vendor_applications %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 px-2 text-gray-600 font-medium">Vendor Name</th>
+                            <th class="text-left py-3 px-2 text-gray-600 font-medium">Category</th>
+                            <th class="text-left py-3 px-2 text-gray-600 font-medium">Date</th>
+                            <th class="text-left py-3 px-2 text-gray-600 font-medium">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in recent_vendor_applications %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="py-3 px-2">
+                                <a href="{{ url_for('admin.vendors') }}" class="text-gray-800 hover:text-primary font-medium">
+                                    {{ vendor.shop_name }}
+                                </a>
+                            </td>
+                            <td class="py-3 px-2 text-gray-600">{{ vendor.business_type or 'N/A' }}</td>
+                            <td class="py-3 px-2 text-gray-600">{{ vendor.created_at.strftime('%b %d, %Y') if vendor.created_at else 'N/A' }}</td>
+                            <td class="py-3 px-2">
+                                <span class="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    {{ vendor.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-gray-600 text-center py-8">No pending vendor applications</p>
+            {% endif %}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
+            <div class="space-y-3">
+                <a href="{{ url_for('admin.vendors', status='PENDING') }}" class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <span class="material-icons text-primary mr-3">person_add</span>
+                        <span class="font-medium text-gray-800">Approve Vendors</span>
+                    </div>
+                    <span class="material-icons text-gray-400">chevron_right</span>
+                </a>
+                <a href="{{ url_for('admin.categories') }}" class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <span class="material-icons text-primary mr-3">add_business</span>
+                        <span class="font-medium text-gray-800">Add New Category</span>
+                    </div>
+                    <span class="material-icons text-gray-400">chevron_right</span>
+                </a>
+                <a href="{{ url_for('admin.orders') }}" class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <span class="material-icons text-primary mr-3">summarize</span>
+                        <span class="font-medium text-gray-800">Generate Reports</span>
+                    </div>
+                    <span class="material-icons text-gray-400">chevron_right</span>
+                </a>
+                <a href="#" class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <span class="material-icons text-primary mr-3">settings</span>
+                        <span class="font-medium text-gray-800">Platform Settings</span>
+                    </div>
+                    <span class="material-icons text-gray-400">chevron_right</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Usage -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+            <span class="material-icons mr-2 text-gray-600">cloud_queue</span>
+            Server Usage
+        </h2>
+        <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600">Real-time capacity</span>
+                <span class="text-lg font-bold text-gray-800">{{ storage_used }}% Capacity</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+                <div class="{% if storage_used < 50 %}bg-green-500{% elif storage_used < 80 %}bg-yellow-500{% else %}bg-red-500{% endif %} h-4 rounded-full progress-bar flex items-center justify-end pr-2" style="width: {{ storage_used }}%">
+                    <span class="text-xs font-semibold text-white">{{ storage_used }}%</span>
+                </div>
+            </div>
+        </div>
+        <a href="#" class="text-primary hover:text-primary-dark text-sm font-medium">View Details</a>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">Recent Orders</h2>
+            <a href="{{ url_for('admin.orders') }}" class="text-primary hover:text-primary-dark text-sm font-medium">
+                View All
+            </a>
+        </div>
+        {% if recent_orders %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-2 text-gray-600 font-medium">Order ID</th>
+                        <th class="text-left py-3 px-2 text-gray-600 font-medium">Buyer</th>
+                        <th class="text-left py-3 px-2 text-gray-600 font-medium">Vendor</th>
+                        <th class="text-left py-3 px-2 text-gray-600 font-medium">Amount</th>
+                        <th class="text-left py-3 px-2 text-gray-600 font-medium">Status</th>
+                        <th class="text-left py-3 px-2 text-gray-600 font-medium">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-2">
+                            <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="text-primary hover:text-primary-dark font-medium">
+                                #{{ order.id }}
+                            </a>
+                        </td>
+                        <td class="py-3 px-2 text-gray-800">{{ order.buyer.name }}</td>
+                        <td class="py-3 px-2 text-gray-600">{{ order.vendor.shop_name }}</td>
+                        <td class="py-3 px-2 font-semibold text-gray-800">KSh {{ "%.2f"|format(order.total) }}</td>
+                        <td class="py-3 px-2">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if order.status == 'DELIVERED' %}bg-green-100 text-green-800
+                                {% elif order.status == 'CANCELLED' %}bg-red-100 text-red-800
+                                {% elif order.status == 'ON_THE_WAY' %}bg-blue-100 text-blue-800
+                                {% elif order.status == 'ACCEPTED' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-2 text-gray-600">{{ order.created_at.strftime('%b %d, %Y') if order.created_at else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-600 text-center py-8">No recent orders</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

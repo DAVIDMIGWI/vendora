@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Buyers - Vendora{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Buyers</h1>
+
+{% if buyers %}
+<div class="space-y-4">
+    {% for buyer in buyers %}
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <h3 class="font-semibold text-gray-800 text-lg">{{ buyer.name }}</h3>
+        <p class="text-sm text-gray-600">{{ buyer.email }}</p>
+        {% if buyer.phone %}
+        <p class="text-sm text-gray-600">{{ buyer.phone }}</p>
+        {% endif %}
+        <p class="text-xs text-gray-500 mt-2">Joined: {{ buyer.created_at.strftime('%B %d, %Y') }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow-md p-8 text-center">
+    <p class="text-gray-600">No buyers found</p>
+</div>
+{% endif %}
+{% endblock %}
+

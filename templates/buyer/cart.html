@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Cart - Vendora{% endblock %}
+
+{% block content %}
+{% if cart_items %}
+<div class="space-y-6">
+    {% for cart_item in cart_items %}
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <h3 class="font-semibold text-gray-800 mb-3">{{ cart_item.vendor.shop_name }}</h3>
+        
+        <div class="space-y-3">
+            {% for item in cart_item.cart_items %}
+            <div class="flex items-center gap-3 border-b pb-3">
+                {% if item.product.image_url %}
+                <div class="flex-shrink-0">
+                    <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" 
+                         class="w-16 h-16 object-cover rounded-lg border border-gray-200">
+                </div>
+                {% endif %}
+                <div class="flex-1">
+                    <h4 class="font-medium text-gray-800">{{ item.product.name }}</h4>
+                    <p class="text-sm text-gray-600">KSh {{ "%.2f"|format(item.product.price) }} / {{ item.product.unit }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <form method="POST" action="{{ url_for('buyer.update_cart') }}" class="flex items-center gap-2">
+                        <input type="hidden" name="vendor_id" value="{{ cart_item.vendor.id }}">
+                        <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                        <button type="submit" name="quantity" value="{{ item.quantity - 1 }}" 
+                                class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">-</button>
+                        <span class="w-12 text-center font-medium">{{ item.quantity }}</span>
+                        <button type="submit" name="quantity" value="{{ item.quantity + 1 }}" 
+                                class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">+</button>
+                    </form>
+                    <p class="font-semibold text-primary w-20 text-right">KSh {{ "%.2f"|format(item.total) }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="mt-3 pt-3 border-t flex justify-between">
+            <span class="font-semibold">Subtotal:</span>
+            <span class="font-bold text-primary">KSh {{ "%.2f"|format(cart_item.subtotal) }}</span>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <div class="bg-white rounded-lg shadow-md p-4 sticky bottom-20">
+        <div class="flex justify-between items-center mb-4">
+            <span class="text-xl font-bold text-gray-800">Total:</span>
+            <span class="text-2xl font-bold text-primary">KSh {{ "%.2f"|format(total) }}</span>
+        </div>
+        <a href="{{ url_for('buyer.checkout') }}" 
+           class="block w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-4 rounded-lg text-center transition duration-200">
+            Proceed to Checkout
+        </a>
+    </div>
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow-md p-8 text-center">
+    <p class="text-gray-600 mb-4">Your cart is empty</p>
+    <a href="{{ url_for('buyer.home') }}" 
+       class="inline-block bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-6 rounded-lg">
+        Start Shopping
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block bottom_nav %}
+<nav class="bottom-nav">
+    <div class="flex justify-around items-center py-3">
+        <a href="{{ url_for('buyer.home') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            <span class="text-xs mt-1">Home</span>
+        </a>
+        <a href="{{ url_for('buyer.cart') }}" class="flex flex-col items-center text-primary relative">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            {% if cart_count > 0 %}
+            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{{ cart_count }}</span>
+            {% endif %}
+            <span class="text-xs mt-1">Cart</span>
+        </a>
+        <a href="{{ url_for('buyer.orders') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="text-xs mt-1">Orders</span>
+        </a>
+        <a href="{{ url_for('buyer.profile') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="text-xs mt-1">Profile</span>
+        </a>
+    </div>
+</nav>
+{% endblock %}
+

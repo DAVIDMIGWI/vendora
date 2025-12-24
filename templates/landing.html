@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendora - Order from Local Vendors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#22C55E',
+                        'primary-dark': '#15803D',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            padding-top: 80px; /* Space for fixed navbar */
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Hero Section -->
+    <section id="home" class="container mx-auto px-4 py-12 md:py-20">
+        <div class="grid md:grid-cols-2 gap-8 items-center">
+            <!-- Left: Text Content -->
+            <div class="space-y-6">
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-800 leading-tight">
+                    Order from your local vendors, pay <span class="text-primary">cash on delivery</span>
+                </h2>
+                <p class="text-lg text-gray-600">
+                    Fresh groceries, meals, and essentials delivered to your door in minutes. Support your local community.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="{{ url_for('auth.register_buyer') }}" 
+                       class="bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-8 rounded-lg text-center transition duration-200 text-lg">
+                        Find Vendors
+                    </a>
+                    <a href="{{ url_for('how_it_works') }}" 
+                       class="bg-white border-2 border-gray-300 text-gray-800 font-semibold py-3 px-8 rounded-lg text-center hover:border-primary transition duration-200 text-lg">
+                        How It Works
+                    </a>
+                </div>
+                <div class="flex flex-wrap gap-6 pt-4">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <span class="text-sm text-gray-600">Secure & Trusted</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span class="text-sm text-gray-600">Fast Delivery</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right: Image -->
+            <div class="relative">
+                <div class="bg-gray-200 rounded-2xl overflow-hidden shadow-xl">
+                    <img src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=600&h=700&fit=crop" 
+                         alt="Person with fresh groceries" 
+                         class="w-full h-auto object-cover">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="bg-white py-16 md:py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">How It Works</h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                    Getting started with Vendora is simple. Follow these easy steps to start ordering or selling.
+                </p>
+            </div>
+
+            <!-- For Buyers -->
+            <div class="mb-16">
+                <h3 class="text-2xl font-bold text-gray-800 mb-8 text-center">For Buyers</h3>
+                <div class="grid md:grid-cols-4 gap-6 md:gap-8">
+                    <!-- Step 1 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">1</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Create Account</h4>
+                        <p class="text-sm text-gray-600">Sign up as a buyer with your email and phone number. It takes less than a minute!</p>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">2</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Browse & Add to Cart</h4>
+                        <p class="text-sm text-gray-600">Explore local vendors and their products. Add items to your cart from multiple vendors.</p>
+                    </div>
+                    
+                    <!-- Step 3 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">3</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Place Order</h4>
+                        <p class="text-sm text-gray-600">Enter your delivery address and place your order. Vendor will set the delivery fee.</p>
+                    </div>
+                    
+                    <!-- Step 4 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">4</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Pay & Receive</h4>
+                        <p class="text-sm text-gray-600">Pay when your order arrives. Cash on delivery or follow vendor's payment instructions.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- For Vendors -->
+            <div class="bg-gray-50 rounded-2xl p-8 md:p-12">
+                <h3 class="text-2xl font-bold text-gray-800 mb-8 text-center">For Vendors</h3>
+                <div class="grid md:grid-cols-4 gap-6 md:gap-8">
+                    <!-- Step 1 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary-dark rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">1</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Register Your Shop</h4>
+                        <p class="text-sm text-gray-600">Create a vendor account with your shop details. Wait for admin approval.</p>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary-dark rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">2</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Add Products</h4>
+                        <p class="text-sm text-gray-600">Upload your products with images, prices, and descriptions. Organize by categories.</p>
+                    </div>
+                    
+                    <!-- Step 3 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary-dark rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">3</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Accept Orders</h4>
+                        <p class="text-sm text-gray-600">Receive orders from buyers. Set delivery fees and manage unavailable items.</p>
+                    </div>
+                    
+                    <!-- Step 4 -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary-dark rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white font-bold text-2xl">4</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Deliver & Get Paid</h4>
+                        <p class="text-sm text-gray-600">Update order status, deliver to customers, and confirm payments received.</p>
+                    </div>
+                </div>
+                <div class="text-center mt-8">
+                    <a href="{{ url_for('auth.register_vendor') }}" 
+                       class="inline-block bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-8 rounded-lg transition duration-200">
+                        Register as Vendor
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Shop by Category -->
+    <section id="vendors" class="bg-gray-50 py-12">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Shop by Category</h2>
+                <a href="{{ url_for('auth.register_buyer') }}" class="text-primary hover:text-primary-dark font-medium">View all →</a>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+                <!-- Category 1: Mama Mboga -->
+                <a href="{{ url_for('auth.register_buyer') }}" class="group">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-200">
+                        <div class="aspect-square bg-gray-100 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=300&h=300&fit=crop" 
+                                 alt="Fresh vegetables" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                        </div>
+                        <p class="p-3 text-center font-medium text-gray-800">Mama Mboga</p>
+                    </div>
+                </a>
+                
+                <!-- Category 2: Fruits -->
+                <a href="{{ url_for('auth.register_buyer') }}" class="group">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-200">
+                        <div class="aspect-square bg-orange-100 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=300&h=300&fit=crop" 
+                                 alt="Fresh fruits" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                        </div>
+                        <p class="p-3 text-center font-medium text-gray-800">Fruits</p>
+                    </div>
+                </a>
+                
+                <!-- Category 3: Butcher -->
+                <a href="{{ url_for('auth.register_buyer') }}" class="group">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-200">
+                        <div class="aspect-square bg-gray-100 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=300&h=300&fit=crop" 
+                                 alt="Fresh meat" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                        </div>
+                        <p class="p-3 text-center font-medium text-gray-800">Butcher</p>
+                    </div>
+                </a>
+                
+                <!-- Category 4: Kiosk -->
+                <a href="{{ url_for('auth.register_buyer') }}" class="group">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-200">
+                        <div class="aspect-square bg-gray-100 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=300&fit=crop" 
+                                 alt="Convenience store" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                        </div>
+                        <p class="p-3 text-center font-medium text-gray-800">Kiosk</p>
+                    </div>
+                </a>
+                
+                <!-- Category 5: Bakery -->
+                <a href="{{ url_for('auth.register_buyer') }}" class="group">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-200">
+                        <div class="aspect-square bg-amber-50 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&h=300&fit=crop" 
+                                 alt="Fresh bread" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                        </div>
+                        <p class="p-3 text-center font-medium text-gray-800">Bakery</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="text-center">
+                <p class="mb-4">&copy; 2025 Vendora. All rights reserved.</p>
+                <div class="flex justify-center gap-6 text-sm">
+                    <a href="{{ url_for('terms') }}" class="text-gray-300 hover:text-white transition duration-200">Terms of Service</a>
+                    <a href="{{ url_for('privacy') }}" class="text-gray-300 hover:text-white transition duration-200">Privacy Policy</a>
+                    <a href="{{ url_for('help') }}" class="text-gray-300 hover:text-white transition duration-200">Help & Support</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+

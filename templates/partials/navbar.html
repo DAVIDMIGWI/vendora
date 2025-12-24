@@ -1,0 +1,62 @@
+<!-- Navbar Component -->
+<header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50 border-b-4 border-primary">
+    <div class="container mx-auto px-4 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <img src="{{ url_for('static', filename='favicon.svg') }}" alt="Vendora Logo" class="w-10 h-10">
+                <a href="{% if current_user.is_authenticated %}{% if current_user.is_admin() %}{{ url_for('admin.dashboard') }}{% elif current_user.is_vendor() %}{{ url_for('vendor.dashboard') }}{% else %}{{ url_for('buyer.home') }}{% endif %}{% else %}{{ url_for('landing') }}{% endif %}" 
+                   class="text-xl font-bold text-gray-800">Vendora</a>
+            </div>
+            
+            {% if current_user.is_authenticated %}
+                <!-- Authenticated User Navbar -->
+                <nav class="hidden md:flex items-center space-x-6">
+                    {% if current_user.is_buyer() %}
+                        <a href="{{ url_for('buyer.home') }}" class="text-gray-700 hover:text-primary">Home</a>
+                        <a href="{{ url_for('buyer.orders') }}" class="text-gray-700 hover:text-primary">Orders</a>
+                        <a href="{{ url_for('buyer.profile') }}" class="text-gray-700 hover:text-primary">Profile</a>
+                    {% elif current_user.is_vendor() %}
+                        <a href="{{ url_for('vendor.dashboard') }}" class="text-gray-700 hover:text-primary">Dashboard</a>
+                        <a href="{{ url_for('vendor.products') }}" class="text-gray-700 hover:text-primary">Products</a>
+                        <a href="{{ url_for('vendor.orders') }}" class="text-gray-700 hover:text-primary">Orders</a>
+                        <a href="{{ url_for('vendor.profile') }}" class="text-gray-700 hover:text-primary">Profile</a>
+                    {% elif current_user.is_admin() %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="text-gray-700 hover:text-primary">Dashboard</a>
+                        <a href="{{ url_for('admin.vendors') }}" class="text-gray-700 hover:text-primary">Vendors</a>
+                        <a href="{{ url_for('admin.orders') }}" class="text-gray-700 hover:text-primary">Orders</a>
+                        <a href="{{ url_for('admin.categories') }}" class="text-gray-700 hover:text-primary">Categories</a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium">Logout</a>
+                </nav>
+                <div class="md:hidden flex items-center space-x-3">
+                    {% if current_user.is_buyer() and cart_count > 0 %}
+                    <a href="{{ url_for('buyer.cart') }}" class="relative">
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{{ cart_count }}</span>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}" class="text-primary font-medium text-sm">Logout</a>
+                </div>
+            {% else %}
+                <!-- Non-authenticated User Navbar -->
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="{{ url_for('landing') }}" class="text-gray-700 hover:text-primary">Home</a>
+                    <a href="{{ url_for('how_it_works') }}" class="text-gray-700 hover:text-primary">How it works</a>
+                    <a href="{{ url_for('about') }}" class="text-gray-700 hover:text-primary">About Us</a>
+                    <a href="{{ url_for('help') }}" class="text-gray-700 hover:text-primary">Help</a>
+                    <a href="{{ url_for('auth.login') }}" class="text-gray-700 hover:text-primary">Login</a>
+                    <a href="{{ url_for('auth.register_buyer') }}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium">Register</a>
+                </nav>
+                <div class="md:hidden flex items-center space-x-4">
+                    <a href="{{ url_for('how_it_works') }}" class="text-gray-700 hover:text-primary text-sm">How it works</a>
+                    <a href="{{ url_for('about') }}" class="text-gray-700 hover:text-primary text-sm">About</a>
+                    <a href="{{ url_for('help') }}" class="text-gray-700 hover:text-primary text-sm">Help</a>
+                    <a href="{{ url_for('auth.login') }}" class="text-primary font-medium text-sm">Login</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</header>
+

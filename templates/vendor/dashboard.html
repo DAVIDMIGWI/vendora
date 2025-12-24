@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Vendora{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md p-5 border border-gray-100 hover:shadow-lg transition-shadow duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 mb-1 font-medium">Total Orders</p>
+                <p class="text-3xl font-bold text-primary">{{ total_orders }}</p>
+            </div>
+            <div class="bg-primary/10 rounded-full p-3">
+                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-white to-yellow-50 rounded-lg shadow-md p-5 border border-yellow-100 hover:shadow-lg transition-shadow duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 mb-1 font-medium">Pending Orders</p>
+                <p class="text-3xl font-bold text-yellow-600">{{ pending_orders }}</p>
+            </div>
+            <div class="bg-yellow-100 rounded-full p-3">
+                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-white to-green-50 rounded-lg shadow-md p-5 border border-green-100 hover:shadow-lg transition-shadow duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 mb-1 font-medium">Active Products</p>
+                <p class="text-3xl font-bold text-green-600">{{ active_products }}</p>
+            </div>
+            <div class="bg-green-100 rounded-full p-3">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md p-5 border border-gray-100 hover:shadow-lg transition-shadow duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-600 mb-1 font-medium">Status</p>
+                <p class="text-xl font-bold {% if vendor.is_online %}text-green-600{% else %}text-gray-600{% endif %}">
+                    {% if vendor.is_online %}🟢 Online{% else %}⚫ Offline{% endif %}
+                </p>
+            </div>
+            <div class="{% if vendor.is_online %}bg-green-100{% else %}bg-gray-100{% endif %} rounded-full p-3">
+                <svg class="w-6 h-6 {% if vendor.is_online %}text-green-600{% else %}text-gray-600{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Orders (Prominent Display) -->
+{% if pending_orders_list %}
+<div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-yellow-400">
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span class="inline-flex items-center justify-center w-8 h-8 bg-yellow-500 text-white rounded-full animate-pulse">!</span>
+                New Orders Requiring Action
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">{{ pending_orders_list|length }} order(s) waiting for your response</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse" id="live-indicator"></div>
+            <span class="text-xs text-gray-500 font-medium" id="last-update">Live</span>
+        </div>
+    </div>
+    
+    <div class="space-y-4" id="pending-orders-container">
+        {% for order in pending_orders_list %}
+        <div class="order-card bg-white rounded-lg shadow-md p-5 border-2 border-yellow-300 hover:shadow-xl transition-all duration-200
+                    pending-order"
+             data-order-id="{{ order.id }}"
+             data-current-status="{{ order.status }}"
+             data-current-payment-status="{{ order.payment_status }}">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h3 class="text-xl font-bold text-gray-800">Order #{{ order.id }}</h3>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-500 text-white animate-pulse">
+                            NEW
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-1"><strong>Customer:</strong> {{ order.buyer.name }}</p>
+                    <p class="text-sm text-gray-600 mb-1"><strong>Phone:</strong> {{ order.buyer.phone or 'N/A' }}</p>
+                    <p class="text-sm text-gray-600 mb-2"><strong>Time:</strong> {{ order.created_at.strftime('%I:%M %p') }}</p>
+                    <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Order Items:</p>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            {% for item in order.items %}
+                            {% if not item.is_removed %}
+                            <li>• {{ item.quantity }}x {{ item.product_name_snapshot }} - KSh {{ "%.2f"|format(item.unit_price_snapshot * item.quantity) }}</li>
+                            {% endif %}
+                            {% endfor %}
+                        </ul>
+                        <p class="text-lg font-bold text-primary mt-3 pt-3 border-t border-gray-200">
+                            Total: KSh {{ "%.2f"|format(order.total) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Big Accept/Decline Buttons -->
+            <div class="flex gap-3 mt-4">
+                <form method="POST" action="{{ url_for('vendor.update_order_status', order_id=order.id) }}" class="flex-1" id="accept-form-{{ order.id }}">
+                    <input type="hidden" name="status" value="ACCEPTED">
+                    <input type="hidden" name="delivery_fee" value="0" id="delivery-fee-{{ order.id }}">
+                    <button type="button" onclick="promptDeliveryFee({{ order.id }})"
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center text-lg shadow-lg hover:shadow-xl transform hover:scale-105">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        ACCEPT ORDER
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('vendor.update_order_status', order_id=order.id) }}" class="flex-1">
+                    <input type="hidden" name="status" value="CANCELLED">
+                    <button type="submit" 
+                            onclick="return confirm('Are you sure you want to decline this order?');"
+                            class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center text-lg shadow-lg hover:shadow-xl transform hover:scale-105">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        DECLINE ORDER
+                    </button>
+                </form>
+            </div>
+            
+            <div class="mt-3 text-center">
+                <a href="{{ url_for('vendor.order_detail', order_id=order.id) }}" 
+                   class="text-sm text-primary hover:underline font-medium">
+                    View Full Order Details →
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Today's Orders -->
+<div class="bg-white rounded-lg shadow-md p-4">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Today's Orders</h2>
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse" id="live-indicator-2"></div>
+            <span class="text-xs text-gray-500" id="last-update-2">Live</span>
+        </div>
+    </div>
+    {% if today_orders %}
+    <div class="space-y-3" id="orders-container">
+        {% for order in today_orders %}
+        <div class="order-card border rounded-lg p-3 hover:bg-gray-50 transition-all duration-200
+                    {% if order.status == 'PENDING' %}pending-order border-l-4 border-l-yellow-500{% endif %}"
+             data-order-id="{{ order.id }}"
+             data-current-status="{{ order.status }}"
+             data-current-payment-status="{{ order.payment_status }}">
+            <a href="{{ url_for('vendor.order_detail', order_id=order.id) }}">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <p class="font-medium text-gray-800 hover:text-primary">Order #{{ order.id }}</p>
+                            {% if order.status == 'PENDING' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">
+                                NEW
+                            </span>
+                            {% endif %}
+                        </div>
+                        <p class="text-sm text-gray-600">{{ order.buyer.name }}</p>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="order-status-badge px-2 py-1 rounded text-xs font-medium
+                            {% if order.status == 'DELIVERED' %}bg-green-100 text-green-800
+                            {% elif order.status == 'CANCELLED' %}bg-red-100 text-red-800
+                            {% elif order.status == 'ON_THE_WAY' %}bg-blue-100 text-blue-800
+                            {% elif order.status == 'ACCEPTED' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ order.status }}
+                        </span>
+                        <span class="payment-status-badge px-2 py-1 rounded text-xs font-medium
+                            {% if order.payment_status == 'PAID' %}bg-green-100 text-green-800
+                            {% elif order.payment_status == 'NOT_PAID' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {% if order.payment_status == 'PAID' %}💰 Paid
+                            {% elif order.payment_status == 'NOT_PAID' %}❌ Not Paid
+                            {% else %}⏳ Pending{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <p class="text-sm text-primary font-semibold mb-2">KSh {{ "%.2f"|format(order.total) }}</p>
+            </a>
+            <!-- Quick Payment Actions -->
+            <div class="flex gap-2 pt-2 border-t">
+                <form method="POST" action="{{ url_for('vendor.update_payment_status', order_id=order.id) }}" class="flex-1">
+                    <input type="hidden" name="payment_status" value="PAID">
+                    <button type="submit" 
+                            onclick="event.stopPropagation();"
+                            class="w-full py-1.5 px-2 rounded-lg font-medium text-xs transition-all duration-200
+                            {% if order.payment_status == 'PAID' %}
+                            bg-green-500 text-white hover:bg-green-600
+                            {% else %}
+                            bg-green-100 text-green-700 hover:bg-green-200 border border-green-300
+                            {% endif %}">
+                        ✅ Paid
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('vendor.update_payment_status', order_id=order.id) }}" class="flex-1">
+                    <input type="hidden" name="payment_status" value="NOT_PAID">
+                    <button type="submit" 
+                            onclick="event.stopPropagation();"
+                            class="w-full py-1.5 px-2 rounded-lg font-medium text-xs transition-all duration-200
+                            {% if order.payment_status == 'NOT_PAID' %}
+                            bg-red-500 text-white hover:bg-red-600
+                            {% else %}
+                            bg-red-100 text-red-700 hover:bg-red-200 border border-red-300
+                            {% endif %}">
+                        ❌ Not Paid
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-600 text-center py-4" id="no-orders-message">No orders today</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .pending-order {
+        animation: blink 2s infinite;
+        background-color: #FEF3C7;
+    }
+    
+    .pending-order:hover {
+        animation: none;
+        background-color: #FDE68A;
+    }
+    
+    .order-card.status-updated {
+        animation: pulse 0.5s;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+    
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Real-time order status updates for vendor dashboard
+    let updateInterval;
+    let isUpdating = false;
+    
+    // Status configuration
+    const statusConfig = {
+        'PENDING': { text: 'PENDING', class: 'bg-gray-100 text-gray-800' },
+        'ACCEPTED': { text: 'ACCEPTED', class: 'bg-yellow-100 text-yellow-800' },
+        'ON_THE_WAY': { text: 'ON THE WAY', class: 'bg-blue-100 text-blue-800' },
+        'DELIVERED': { text: 'DELIVERED', class: 'bg-green-100 text-green-800' },
+        'CANCELLED': { text: 'CANCELLED', class: 'bg-red-100 text-red-800' }
+    };
+    
+    const paymentStatusConfig = {
+        'PENDING': { text: '⏳ Pending', class: 'bg-yellow-100 text-yellow-800' },
+        'PAID': { text: '💰 Paid', class: 'bg-green-100 text-green-800' },
+        'NOT_PAID': { text: '❌ Not Paid', class: 'bg-red-100 text-red-800' }
+    };
+    
+    function promptDeliveryFee(orderId) {
+        const deliveryFee = prompt('Enter delivery fee (KSh):\n\nLeave empty or enter 0 for no delivery fee.', '0');
+        if (deliveryFee === null) {
+            return; // User cancelled
+        }
+        
+        const fee = parseFloat(deliveryFee) || 0;
+        if (fee < 0) {
+            alert('Delivery fee cannot be negative');
+            return;
+        }
+        
+        // Set the delivery fee in the hidden input
+        const feeInput = document.getElementById(`delivery-fee-${orderId}`);
+        if (feeInput) {
+            feeInput.value = fee;
+        }
+        
+        // Submit the form
+        const form = document.getElementById(`accept-form-${orderId}`);
+        if (form) {
+            form.submit();
+        }
+    }
+    
+    function showNotification(message, type = 'info') {
+        const colors = {
+            'success': 'bg-green-500 text-white',
+            'info': 'bg-blue-500 text-white',
+            'warning': 'bg-yellow-500 text-white',
+            'error': 'bg-red-500 text-white'
+        };
+        
+        const notification = document.createElement('div');
+        notification.className = `notification ${colors[type]}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    function updateOrderStatus(orderId, newStatus, newPaymentStatus) {
+        // Check both pending orders container and today's orders container
+        const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
+        if (!orderCard) {
+            // New order - might need to reload or add dynamically
+            console.log(`Order card not found for order ID: ${orderId} - might be a new order`);
+            // If order was accepted/declined, reload page to update pending orders section
+            if (newStatus === 'ACCEPTED' || newStatus === 'CANCELLED') {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+            return;
+        }
+        
+        const currentStatus = orderCard.getAttribute('data-current-status');
+        const currentPaymentStatus = orderCard.getAttribute('data-current-payment-status');
+        
+        // Check if status changed
+        if (currentStatus !== newStatus) {
+            // If order was accepted or declined, remove from pending orders section
+            if ((newStatus === 'ACCEPTED' || newStatus === 'CANCELLED') && currentStatus === 'PENDING') {
+                // Remove the order card with animation
+                orderCard.style.transition = 'opacity 0.3s, transform 0.3s';
+                orderCard.style.opacity = '0';
+                orderCard.style.transform = 'translateX(-100%)';
+                setTimeout(() => {
+                    orderCard.remove();
+                    // Check if pending orders container is now empty
+                    const pendingContainer = document.getElementById('pending-orders-container');
+                    if (pendingContainer && pendingContainer.children.length === 0) {
+                        const pendingSection = pendingContainer.closest('.bg-gradient-to-r');
+                        if (pendingSection) {
+                            pendingSection.style.transition = 'opacity 0.3s';
+                            pendingSection.style.opacity = '0';
+                            setTimeout(() => pendingSection.remove(), 300);
+                        }
+                    }
+                }, 300);
+                
+                // Show notification
+                if (newStatus === 'ACCEPTED') {
+                    showNotification(`Order #${orderId} has been accepted! ✓`, 'success');
+                } else {
+                    showNotification(`Order #${orderId} has been declined`, 'info');
+                }
+                return;
+            }
+            
+            // Update status badge
+            const statusBadge = orderCard.querySelector('.order-status-badge');
+            if (statusBadge) {
+                const config = statusConfig[newStatus] || statusConfig['PENDING'];
+                statusBadge.textContent = config.text;
+                statusBadge.className = `order-status-badge px-2 py-1 rounded text-xs font-medium ${config.class}`;
+            }
+            
+            // Update blinking animation based on status
+            if (newStatus === 'PENDING') {
+                orderCard.classList.add('pending-order', 'border-l-4', 'border-l-yellow-500');
+            } else {
+                orderCard.classList.remove('pending-order', 'border-l-4', 'border-l-yellow-500');
+            }
+            
+            // Show notification for important status changes
+            if (newStatus === 'ACCEPTED' && currentStatus === 'PENDING') {
+                showNotification(`Order #${orderId} has been accepted! ✓`, 'success');
+            } else if (newStatus === 'ON_THE_WAY') {
+                showNotification(`Order #${orderId} is on the way! 🚚`, 'info');
+            } else if (newStatus === 'DELIVERED') {
+                showNotification(`Order #${orderId} has been delivered! ✓`, 'success');
+            }
+            
+            orderCard.setAttribute('data-current-status', newStatus);
+            orderCard.classList.add('status-updated');
+            setTimeout(() => orderCard.classList.remove('status-updated'), 500);
+        }
+        
+        // Check if payment status changed
+        if (currentPaymentStatus !== newPaymentStatus) {
+            const paymentBadge = orderCard.querySelector('.payment-status-badge');
+            if (paymentBadge) {
+                const config = paymentStatusConfig[newPaymentStatus] || paymentStatusConfig['PENDING'];
+                paymentBadge.textContent = config.text;
+                paymentBadge.className = `payment-status-badge px-2 py-1 rounded text-xs font-medium ${config.class}`;
+            }
+            
+            if (newPaymentStatus === 'PAID') {
+                showNotification(`Payment confirmed for Order #${orderId}! 💰`, 'success');
+            }
+            
+            orderCard.setAttribute('data-current-payment-status', newPaymentStatus);
+        }
+    }
+    
+    function checkOrderUpdates() {
+        if (isUpdating) return;
+        isUpdating = true;
+        
+        fetch('{{ url_for("vendor.get_orders_status") }}?today_only=true')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.orders) {
+                    // Update last update time
+                    const lastUpdateEl = document.getElementById('last-update');
+                    const lastUpdateEl2 = document.getElementById('last-update-2');
+                    if (lastUpdateEl) {
+                        const now = new Date();
+                        lastUpdateEl.textContent = `Updated ${now.toLocaleTimeString()}`;
+                    }
+                    if (lastUpdateEl2) {
+                        const now = new Date();
+                        lastUpdateEl2.textContent = `Updated ${now.toLocaleTimeString()}`;
+                    }
+                    
+                    Object.keys(data.orders).forEach(orderIdStr => {
+                        const orderId = parseInt(orderIdStr);
+                        const orderData = data.orders[orderIdStr];
+                        updateOrderStatus(orderId, orderData.status, orderData.payment_status);
+                    });
+                    
+                    // Check for new pending orders that might need to be added to the pending section
+                    // This would require a separate API call to get all pending orders
+                    // For now, we'll reload if a new pending order appears
+                }
+            })
+            .catch(error => {
+                console.error('Error checking order updates:', error);
+            })
+            .finally(() => {
+                isUpdating = false;
+            });
+    }
+    
+    // Start polling for updates every 3 seconds (more frequent for vendors)
+    function startPolling() {
+        // Check immediately
+        checkOrderUpdates();
+        
+        // Then check every 3 seconds
+        updateInterval = setInterval(checkOrderUpdates, 3000);
+    }
+    
+    // Stop polling when page is hidden, resume when visible
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+        } else {
+            if (!updateInterval) {
+                startPolling();
+            }
+        }
+    });
+    
+    // Start polling when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startPolling);
+    } else {
+        startPolling();
+    }
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
+</script>
+{% endblock %}
+
+{% block bottom_nav %}
+<nav class="bottom-nav">
+    <div class="flex justify-around items-center py-3">
+        <a href="{{ url_for('vendor.dashboard') }}" class="flex flex-col items-center text-primary">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            <span class="text-xs mt-1">Dashboard</span>
+        </a>
+        <a href="{{ url_for('vendor.products') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+            <span class="text-xs mt-1">Products</span>
+        </a>
+        <a href="{{ url_for('vendor.orders') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="text-xs mt-1">Orders</span>
+        </a>
+        <a href="{{ url_for('vendor.profile') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="text-xs mt-1">Profile</span>
+        </a>
+    </div>
+</nav>
+{% endblock %}
+

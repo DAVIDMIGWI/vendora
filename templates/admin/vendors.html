@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Vendors - Vendora{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Vendors</h1>
+
+<!-- Status Filter -->
+<div class="mb-4 flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.vendors') }}" 
+       class="px-4 py-2 rounded-full {% if not status_filter %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        All
+    </a>
+    <a href="{{ url_for('admin.vendors', status='PENDING') }}" 
+       class="px-4 py-2 rounded-full {% if status_filter == 'PENDING' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        Pending
+    </a>
+    <a href="{{ url_for('admin.vendors', status='APPROVED') }}" 
+       class="px-4 py-2 rounded-full {% if status_filter == 'APPROVED' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        Approved
+    </a>
+    <a href="{{ url_for('admin.vendors', status='BLOCKED') }}" 
+       class="px-4 py-2 rounded-full {% if status_filter == 'BLOCKED' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        Blocked
+    </a>
+</div>
+
+{% if vendors %}
+<div class="space-y-4">
+    {% for vendor in vendors %}
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+                <h3 class="font-semibold text-gray-800 text-lg">{{ vendor.shop_name }}</h3>
+                <p class="text-sm text-gray-600">{{ vendor.user.name }} ({{ vendor.user.email }})</p>
+                {% if vendor.business_type %}
+                <p class="text-sm text-gray-600">{{ vendor.business_type }}</p>
+                {% endif %}
+                {% if vendor.location %}
+                <p class="text-sm text-gray-500 mt-1">📍 {{ vendor.location }}</p>
+                {% endif %}
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-medium
+                {% if vendor.status == 'APPROVED' %}bg-green-100 text-green-800
+                {% elif vendor.status == 'BLOCKED' %}bg-red-100 text-red-800
+                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                {{ vendor.status }}
+            </span>
+        </div>
+        <div class="flex gap-2 mt-4">
+            {% if vendor.status == 'PENDING' %}
+            <form method="POST" action="{{ url_for('admin.approve_vendor', vendor_id=vendor.id) }}" class="flex-1">
+                <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg">
+                    Approve
+                </button>
+            </form>
+            {% endif %}
+            {% if vendor.status != 'BLOCKED' %}
+            <form method="POST" action="{{ url_for('admin.block_vendor', vendor_id=vendor.id) }}" 
+                  onsubmit="return confirm('Are you sure you want to block this vendor?');" class="flex-1">
+                <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg">
+                    Block
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow-md p-8 text-center">
+    <p class="text-gray-600">No vendors found</p>
+</div>
+{% endif %}
+{% endblock %}
+

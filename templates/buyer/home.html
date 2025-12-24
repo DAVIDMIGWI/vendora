@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Vendora{% endblock %}
+
+{% block content %}
+<!-- Location Prompt (if location not set) -->
+{% if user_lat is none or user_lon is none %}
+<div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded">
+    <div class="flex items-start justify-between">
+        <div class="flex-1">
+            <h3 class="font-semibold text-blue-800 mb-1 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Set Your Location
+            </h3>
+            <p class="text-sm text-blue-700 mb-3">Set your location to see vendors near you (within 1-2 km)</p>
+            <button type="button" onclick="requestLocation()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition duration-200">
+                Use My Current Location
+            </button>
+            <a href="{{ url_for('buyer.profile') }}" 
+               class="ml-2 text-blue-600 hover:text-blue-800 font-medium text-sm underline">
+                Or set manually in Profile
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Distance Filter -->
+<div class="mb-4 bg-white rounded-lg shadow-md p-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span class="text-sm font-medium text-gray-700">Show vendors within:</span>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('buyer.home', distance=1, category=category_id, search=search, type=search_type) }}" 
+               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 1.0 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+                1 km
+            </a>
+            <a href="{{ url_for('buyer.home', distance=2, category=category_id, search=search, type=search_type) }}" 
+               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 2.0 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+                2 km
+            </a>
+            <a href="{{ url_for('buyer.home', distance=5, category=category_id, search=search, type=search_type) }}" 
+               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 5.0 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+                5 km
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Search Bar -->
+<div class="mb-6">
+    <form method="GET" action="{{ url_for('buyer.home') }}" class="space-y-3">
+        <div class="flex gap-2">
+            <input type="text" name="search" value="{{ search }}" placeholder="Search products or vendors..."
+                   class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg">
+                Search
+            </button>
+        </div>
+        {% if search %}
+        <div class="flex gap-2">
+            <a href="{{ url_for('buyer.home', search=search, type='products') }}" 
+               class="px-4 py-2 rounded-full {% if search_type == 'products' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Products
+            </a>
+            <a href="{{ url_for('buyer.home', search=search, type='vendors') }}" 
+               class="px-4 py-2 rounded-full {% if search_type == 'vendors' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Vendors
+            </a>
+            <a href="{{ url_for('buyer.home', search=search, type='all') }}" 
+               class="px-4 py-2 rounded-full {% if search_type == 'all' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+                All
+            </a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Categories -->
+{% if categories %}
+<div class="mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">Categories</h2>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('buyer.home') }}" 
+           class="px-4 py-2 rounded-full {% if not category_id %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+            All
+        </a>
+        {% for category in categories %}
+        <a href="{{ url_for('buyer.home', category=category.id) }}" 
+           class="px-4 py-2 rounded-full {% if category_id == category.id %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+            {{ category.name }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Products (if searching or category selected) -->
+{% if products or (search and search_type in ['products', 'all']) %}
+<div class="mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">
+        {% if search %}Products matching "{{ search }}"{% else %}Products{% endif %}
+    </h2>
+    {% if products %}
+    <div class="grid grid-cols-1 gap-4">
+        {% for product in products %}
+        <div class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition duration-200">
+            <div class="flex gap-4 mb-3">
+                {% if product.image_url %}
+                <div class="flex-shrink-0">
+                    <img src="{{ product.image_url }}" alt="{{ product.name }}" 
+                         class="w-24 h-24 object-cover rounded-lg border border-gray-200">
+                </div>
+                {% endif %}
+                <div class="flex-1 flex justify-between items-start">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-800 text-lg">{{ product.name }}</h3>
+                        {% if product.description %}
+                        <p class="text-sm text-gray-600 mt-1">{{ product.description }}</p>
+                        {% endif %}
+                        <p class="text-sm text-gray-500 mt-2">
+                            From: <a href="{{ url_for('buyer.vendor_view', vendor_id=product.vendor_id) }}" 
+                                      class="text-primary hover:text-primary-dark font-medium">{{ product.vendor.shop_name }}</a>
+                        </p>
+                    </div>
+                    <div class="text-right ml-4">
+                        <p class="text-xl font-bold text-primary">KSh {{ "%.2f"|format(product.price) }}</p>
+                        <p class="text-xs text-gray-500">/ {{ product.unit }}</p>
+                    </div>
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('buyer.add_to_cart') }}" class="mt-3">
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                <div class="flex items-center gap-2">
+                    <input type="number" name="quantity" value="1" min="1" 
+                           class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center">
+                    <button type="submit" 
+                            class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                        Add to Cart
+                    </button>
+                    <a href="{{ url_for('buyer.vendor_view', vendor_id=product.vendor_id) }}" 
+                       class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-center">
+                        View Shop
+                    </a>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow-md p-8 text-center">
+        <p class="text-gray-600">No products found</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Map View Toggle and Vendors Section -->
+<div>
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-800">
+            {% if search and search_type in ['vendors', 'all'] %}Vendors matching "{{ search }}"{% elif search %}Vendors{% else %}Nearby Vendors{% endif %}
+            {% if vendors and user_lat is not none and user_lon is not none %}
+            <span class="text-sm font-normal text-gray-500 ml-2">(Sorted by distance - closest first)</span>
+            {% endif %}
+        </h2>
+        <div class="flex items-center gap-3">
+            {% if user_lat is not none and user_lon is not none and vendors %}
+            <span class="text-sm text-gray-500">Showing vendors within {{ max_distance }}km</span>
+            <button type="button" onclick="toggleMapView()" id="mapToggleBtn"
+                    class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition duration-200 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+                <span id="mapToggleText">Show Map</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Map View (Hidden by default) -->
+    {% if user_lat is not none and user_lon is not none and vendors %}
+    <div id="vendorsMapContainer" class="hidden mb-6 bg-white rounded-lg shadow-md p-4">
+        <h3 class="text-md font-semibold text-gray-800 mb-3">Vendor Locations Map</h3>
+        <div id="vendorsMap" class="w-full h-96 rounded-lg border border-gray-300" style="z-index: 1;"></div>
+        <p class="text-xs text-gray-500 mt-2">
+            <span class="inline-flex items-center mr-4">
+                <svg class="w-4 h-4 text-blue-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                </svg>
+                Your location
+            </span>
+            <span class="inline-flex items-center">
+                <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                </svg>
+                Vendor locations
+            </span>
+        </p>
+    </div>
+    {% endif %}
+    {% if vendors %}
+    <div class="grid grid-cols-1 gap-4">
+        {% for vendor_data in vendors %}
+        {% set vendor = vendor_data[0] if vendor_data|length == 2 else vendor_data %}
+        {% set distance = vendor_data[1] if vendor_data|length == 2 else none %}
+        <a href="{{ url_for('buyer.vendor_view', vendor_id=vendor.id) }}" 
+           class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition duration-200">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="font-semibold text-gray-800 text-lg">{{ vendor.shop_name }}</h3>
+                        <span class="inline-block w-2 h-2 rounded-full {% if vendor.is_online %}bg-green-500{% else %}bg-gray-400{% endif %}"></span>
+                    </div>
+                    {% if vendor.business_type %}
+                    <p class="text-sm text-gray-600">{{ vendor.business_type }}</p>
+                    {% endif %}
+                    {% if distance is not none %}
+                    <div class="mt-2 flex items-center gap-2">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary text-white">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                            {{ "%.1f"|format(distance) }} km away
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if vendor.location %}
+                    <p class="text-sm text-gray-500 mt-1 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        {{ vendor.location }}
+                    </p>
+                    {% endif %}
+                    {% if vendor.delivery_note %}
+                    <p class="text-sm text-primary mt-1">{{ vendor.delivery_note }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow-md p-8 text-center">
+        {% if user_lat is none or user_lon is none %}
+        <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        <p class="text-gray-600 text-lg mb-2">Set your location to see nearby vendors</p>
+        <p class="text-gray-500 text-sm mb-4">We'll show you vendors within 1-2 km of your location</p>
+        <a href="{{ url_for('buyer.profile') }}" 
+           class="inline-block bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-6 rounded-lg">
+            Set Location in Profile
+        </a>
+        {% elif user_lat is not none and user_lon is not none %}
+        <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        <p class="text-gray-600 text-lg mb-2">No vendors found within {{ max_distance }}km</p>
+        <p class="text-gray-500 text-sm mb-4">Try increasing the distance or check back later</p>
+        <div class="flex gap-2 justify-center">
+            <a href="{{ url_for('buyer.home', distance=5, category=category_id, search=search, type=search_type) }}" 
+               class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                Show 5km
+            </a>
+            <a href="{{ url_for('buyer.vendors_list') }}" 
+               class="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-4 rounded-lg">
+                View All Vendors
+            </a>
+        </div>
+        {% else %}
+        <p class="text-gray-600">No vendors found</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block bottom_nav %}
+<nav class="bottom-nav">
+    <div class="flex justify-around items-center py-3">
+        <a href="{{ url_for('buyer.home') }}" class="flex flex-col items-center text-primary">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            <span class="text-xs mt-1">Home</span>
+        </a>
+        <a href="{{ url_for('buyer.cart') }}" class="flex flex-col items-center text-gray-600 relative">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            {% if cart_count > 0 %}
+            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{{ cart_count }}</span>
+            {% endif %}
+            <span class="text-xs mt-1">Cart</span>
+        </a>
+        <a href="{{ url_for('buyer.orders') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="text-xs mt-1">Orders</span>
+        </a>
+        <a href="{{ url_for('buyer.profile') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="text-xs mt-1">Profile</span>
+        </a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let vendorsMap = null;
+    let vendorsMarkers = [];
+    let userMarker = null;
+    
+    // #region agent log
+    console.log('Location check:', {
+        user_lat: {{ user_lat|tojson if user_lat else 'null' }},
+        user_lon: {{ user_lon|tojson if user_lon else 'null' }},
+        has_location: {{ has_location|tojson if has_location is defined else 'undefined' }}
+    });
+    // #endregion
+    
+    // Toggle map view
+    function toggleMapView() {
+        const mapContainer = document.getElementById('vendorsMapContainer');
+        const toggleBtn = document.getElementById('mapToggleBtn');
+        const toggleText = document.getElementById('mapToggleText');
+        
+        if (mapContainer.classList.contains('hidden')) {
+            mapContainer.classList.remove('hidden');
+            toggleText.textContent = 'Hide Map';
+            
+            // Initialize map if not already initialized
+            // Wait a bit for the container to be visible before initializing
+            setTimeout(() => {
+                if (!vendorsMap && typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+                    initVendorsMap();
+                } else if (!vendorsMap) {
+                    // Wait for Google Maps to load
+                    const checkGoogleMaps = setInterval(() => {
+                        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+                            clearInterval(checkGoogleMaps);
+                            initVendorsMap();
+                        }
+                    }, 100);
+                    // Stop checking after 5 seconds
+                    setTimeout(() => clearInterval(checkGoogleMaps), 5000);
+                }
+            }, 100);
+        } else {
+            mapContainer.classList.add('hidden');
+            toggleText.textContent = 'Show Map';
+        }
+    }
+    
+    // Initialize vendors map
+    function initVendorsMap() {
+        {% if user_lat is not none and user_lon is not none and vendors and config.GOOGLE_MAPS_API_KEY %}
+        const userLat = {{ user_lat }};
+        const userLon = {{ user_lon }};
+        
+        // Create map centered on user location
+        vendorsMap = new google.maps.Map(document.getElementById('vendorsMap'), {
+            center: { lat: userLat, lng: userLon },
+            zoom: 13,
+            mapTypeControl: true,
+            streetViewControl: true,
+            fullscreenControl: true
+        });
+        
+        // Add user location marker (person icon)
+        // Using a person icon SVG path
+        const personIcon = {
+            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+            fillColor: '#3B82F6',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 2,
+            scale: 1.2,
+            anchor: new google.maps.Point(12, 24),
+            rotation: 0
+        };
+        
+        userMarker = new google.maps.Marker({
+            position: { lat: userLat, lng: userLon },
+            map: vendorsMap,
+            title: 'Your Location',
+            icon: personIcon,
+            zIndex: 1000,
+            optimized: false
+        });
+        
+        // Add info window for user location
+        const userInfoWindow = new google.maps.InfoWindow({
+            content: '<div class="p-2"><strong>Your Location</strong></div>'
+        });
+        userMarker.addListener('click', () => {
+            userInfoWindow.open(vendorsMap, userMarker);
+        });
+        
+        // Add vendor markers
+        const vendorData = [
+            {% for vendor_data in vendors %}
+            {% set vendor = vendor_data[0] if vendor_data|length == 2 else vendor_data %}
+            {% set distance = vendor_data[1] if vendor_data|length == 2 else none %}
+            {% if vendor.latitude and vendor.longitude %}
+            {
+                id: {{ vendor.id }},
+                name: {{ vendor.shop_name|tojson }},
+                lat: {{ vendor.latitude }},
+                lng: {{ vendor.longitude }},
+                distance: {% if distance is not none %}{{ distance }}{% else %}null{% endif %},
+                location: {{ (vendor.location or '')|tojson }},
+                url: {{ url_for('buyer.vendor_view', vendor_id=vendor.id)|tojson }}
+            }{% if not loop.last %},{% endif %}
+            {% endif %}
+            {% endfor %}
+        ];
+        
+        // Create bounds to fit all markers
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend({ lat: userLat, lng: userLon });
+        
+        vendorData.forEach((vendor) => {
+            const position = { lat: vendor.lat, lng: vendor.lng };
+            bounds.extend(position);
+            
+            // Create marker with store icon
+            const storeIcon = {
+                path: 'M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z',
+                fillColor: '#10B981',
+                fillOpacity: 1,
+                strokeColor: '#FFFFFF',
+                strokeWeight: 2,
+                scale: 1.5,
+                anchor: new google.maps.Point(12, 24),
+                rotation: 0
+            };
+            
+            const marker = new google.maps.Marker({
+                position: position,
+                map: vendorsMap,
+                title: vendor.name,
+                icon: storeIcon,
+                zIndex: 100
+            });
+            
+            // Create info window
+            const distanceText = vendor.distance ? `${vendor.distance.toFixed(1)} km away` : 'Distance unknown';
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div class="p-3">
+                        <h3 class="font-semibold text-gray-800 mb-1">${vendor.name}</h3>
+                        <p class="text-sm text-gray-600 mb-2">${distanceText}</p>
+                        ${vendor.location ? `<p class="text-xs text-gray-500">${vendor.location}</p>` : ''}
+                        <a href="${vendor.url}" class="text-primary text-sm font-medium hover:underline mt-2 inline-block">View Shop →</a>
+                    </div>
+                `
+            });
+            
+            marker.addListener('click', () => {
+                // Close all other info windows
+                vendorsMarkers.forEach(({ infoWindow }) => {
+                    infoWindow.close();
+                });
+                infoWindow.open(vendorsMap, marker);
+            });
+            
+            vendorsMarkers.push({ marker, infoWindow });
+            console.log('Vendor marker added:', vendor.name, 'Total:', vendorsMarkers.length);
+        });
+        
+        console.log('Total markers added:', vendorsMarkers.length);
+        console.log('User marker:', userMarker ? 'Added' : 'Not added');
+        
+        // Fit map to show all markers
+        if (vendorData.length > 0) {
+            vendorsMap.fitBounds(bounds);
+            // Don't zoom in too much if there's only one vendor
+            if (vendorData.length === 1) {
+                google.maps.event.addListenerOnce(vendorsMap, 'bounds_changed', function() {
+                    if (vendorsMap.getZoom() > 15) {
+                        vendorsMap.setZoom(15);
+                    }
+                });
+            }
+            console.log('Map bounds set to show all markers');
+        } else {
+            vendorsMap.setZoom(13);
+            console.log('No vendors to display, using default zoom');
+        }
+        {% else %}
+        console.log('Map initialization skipped - missing requirements');
+        console.log('User location:', {{ user_lat is not none and user_lon is not none }});
+        console.log('Vendors available:', {{ vendors|length if vendors else 0 }});
+        console.log('API key configured:', {{ 'true' if config.GOOGLE_MAPS_API_KEY else 'false' }});
+        {% endif %}
+    }
+    
+    // Auto-request location on first visit if not set
+    {% if user_lat is none or user_lon is none %}
+    window.addEventListener('load', function() {
+        // Check if location was already requested in this session
+        if (!sessionStorage.getItem('locationRequested')) {
+            // #region agent log
+            console.log('Auto-requesting location...');
+            // #endregion
+            setTimeout(function() {
+                requestLocation();
+            }, 1000); // Wait 1 second before requesting
+        }
+    });
+    {% endif %}
+    
+    function requestLocation() {
+        // #region agent log
+        console.log('requestLocation called, geolocation available:', !!navigator.geolocation);
+        // #endregion
+        
+        if (navigator.geolocation) {
+            sessionStorage.setItem('locationRequested', 'true');
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    // #region agent log
+                    console.log('Geolocation success:', {
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    });
+                    // #endregion
+                    
+                    // Send location to server
+                    fetch('{{ url_for("buyer.update_location") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        })
+                    })
+                    .then(response => {
+                        // #region agent log
+                        console.log('Location update response status:', response.status);
+                        // #endregion
+                        return response.json();
+                    })
+                    .then(data => {
+                        // #region agent log
+                        console.log('Location update response data:', data);
+                        // #endregion
+                        if (data.success) {
+                            // Reload page to show nearby vendors
+                            window.location.reload();
+                        } else {
+                            console.error('Failed to save location:', data.error);
+                        }
+                    })
+                    .catch(error => {
+                        // #region agent log
+                        console.error('Location update fetch error:', error);
+                        // #endregion
+                    });
+                },
+                function(error) {
+                    // #region agent log
+                    console.error('Geolocation error:', {
+                        code: error.code,
+                        message: error.message
+                    });
+                    // #endregion
+                    // Don't show alert on auto-request, only on manual click
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        } else {
+            // #region agent log
+            console.log('Geolocation not supported');
+            // #endregion
+        }
+    }
+    
+    // Load Google Maps API if needed
+    {% if user_lat is not none and user_lon is not none and vendors and config.GOOGLE_MAPS_API_KEY %}
+    (function() {
+        if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key={{ config.GOOGLE_MAPS_API_KEY }}&libraries=places';
+            script.async = true;
+            script.defer = true;
+            script.onload = function() {
+                console.log('Google Maps API loaded');
+            };
+            document.head.appendChild(script);
+        }
+    })();
+    {% endif %}
+</script>
+{% endblock %}
+

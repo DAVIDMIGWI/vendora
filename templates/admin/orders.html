@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Orders - Vendora{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Orders</h1>
+
+<!-- Status Filter -->
+<div class="mb-4 flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.orders') }}" 
+       class="px-4 py-2 rounded-full {% if not status_filter %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        All
+    </a>
+    <a href="{{ url_for('admin.orders', status='PENDING') }}" 
+       class="px-4 py-2 rounded-full {% if status_filter == 'PENDING' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        Pending
+    </a>
+    <a href="{{ url_for('admin.orders', status='DELIVERED') }}" 
+       class="px-4 py-2 rounded-full {% if status_filter == 'DELIVERED' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+        Delivered
+    </a>
+</div>
+
+{% if orders %}
+<div class="space-y-4">
+    {% for order in orders %}
+    <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
+       class="block bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition duration-200">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <h3 class="font-semibold text-gray-800">Order #{{ order.id }}</h3>
+                <p class="text-sm text-gray-600">{{ order.buyer.name }} → {{ order.vendor.shop_name }}</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-medium
+                {% if order.status == 'DELIVERED' %}bg-green-100 text-green-800
+                {% elif order.status == 'CANCELLED' %}bg-red-100 text-red-800
+                {% elif order.status == 'ON_THE_WAY' %}bg-blue-100 text-blue-800
+                {% elif order.status == 'ACCEPTED' %}bg-yellow-100 text-yellow-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ order.status }}
+            </span>
+        </div>
+        <div class="flex justify-between items-center mt-3">
+            <span class="text-sm text-gray-600">{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+            <span class="text-lg font-bold text-primary">KSh {{ "%.2f"|format(order.total) }}</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow-md p-8 text-center">
+    <p class="text-gray-600">No orders found</p>
+</div>
+{% endif %}
+{% endblock %}
+

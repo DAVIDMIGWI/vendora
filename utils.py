@@ -1,0 +1,84 @@
+"""Utility functions for Vendora"""
+import math
+from decimal import Decimal
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate the distance between two points on Earth using the Haversine formula.
+    Returns distance in kilometers.
+    
+    Args:
+        lat1, lon1: Latitude and longitude of first point
+        lat2, lon2: Latitude and longitude of second point
+    
+    Returns:
+        Distance in kilometers (float)
+    """
+    if not all([lat1, lon1, lat2, lon2]):
+        return None
+    
+    # Convert Decimal to float if needed
+    lat1 = float(lat1) if isinstance(lat1, Decimal) else lat1
+    lon1 = float(lon1) if isinstance(lon1, Decimal) else lon1
+    lat2 = float(lat2) if isinstance(lat2, Decimal) else lat2
+    lon2 = float(lon2) if isinstance(lon2, Decimal) else lon2
+    
+    # Earth's radius in kilometers
+    R = 6371.0
+    
+    # Convert latitude and longitude from degrees to radians
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
+    
+    # Haversine formula
+    dlat = lat2_rad - lat1_rad
+    dlon = lon2_rad - lon1_rad
+    
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    distance = R * c
+    
+    return round(distance, 2)
+
+def get_vendors_within_radius(vendors, user_lat, user_lon, max_radius_km=2.0):
+    """
+    Filter vendors within a specified radius from user's location.
+    
+    Args:
+        vendors: List of Vendor objects
+        user_lat: User's latitude
+        user_lon: User's longitude
+        max_radius_km: Maximum radius in kilometers (default 2.0)
+    
+    Returns:
+        List of tuples: (vendor, distance_km) sorted by distance
+    """
+    if not user_lat or not user_lon:
+        # If user has no location, return all vendors without distance
+        return [(v, None) for v in vendors]
+    
+    vendors_with_distance = []
+    filtered_out_count = 0
+    
+    for vendor in vendors:
+        if vendor.latitude and vendor.longitude:
+            distance = calculate_distance(
+                user_lat, user_lon,
+                vendor.latitude, vendor.longitude
+            )
+            if distance is not None and distance <= max_radius_km:
+                vendors_with_distance.append((vendor, distance))
+            else:
+                filtered_out_count += 1
+        else:
+            # Vendor without coordinates - include but mark as unknown distance
+            vendors_with_distance.append((vendor, None))
+    
+    # Sort by distance (None values go to end)
+    vendors_with_distance.sort(key=lambda x: x[1] if x[1] is not None else float('inf'))
+    
+    return vendors_with_distance
+

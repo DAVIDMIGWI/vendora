@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <!-- Background circle -->
+    <circle cx="50" cy="50" r="48" fill="#22C55E"/>
+    <!-- Shopping cart icon - simplified -->
+    <g fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Cart body -->
+        <rect x="20" y="35" width="50" height="30" rx="3" fill="none"/>
+        <!-- Cart handle -->
+        <path d="M 25 35 Q 25 25, 35 25 L 55 25 Q 65 25, 65 35"/>
+        <!-- Cart wheels -->
+        <circle cx="30" cy="70" r="5"/>
+        <circle cx="60" cy="70" r="5"/>
+        <!-- Items in cart -->
+        <circle cx="35" cy="50" r="4"/>
+        <circle cx="50" cy="50" r="4"/>
+    </g>
+</svg>

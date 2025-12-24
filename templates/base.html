@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vendora{% endblock %}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v=5">
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico?v=5">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon.svg') }}?v=5">
+    <link rel="shortcut icon" href="/favicon.ico?v=5">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#22C55E',
+                        'primary-dark': '#15803D',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            padding-top: 80px; /* Space for fixed navbar */
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed top-0 left-0 right-0 z-50 p-4 space-y-2">
+                {% for category, message in messages %}
+                    <div class="bg-{% if category == 'error' %}red{% elif category == 'success' %}green{% else %}blue{% endif %}-500 text-white px-4 py-3 rounded-lg shadow-lg">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Header -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bottom Navigation (for mobile) -->
+    {% block bottom_nav %}{% endblock %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

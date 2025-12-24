@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Order #{{ order.id }} - Vendora{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <div class="flex justify-between items-start mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Order #{{ order.id }}</h1>
+            <p class="text-gray-600 mt-1">{{ order.buyer.name }}</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-medium
+            {% if order.status == 'DELIVERED' %}bg-green-100 text-green-800
+            {% elif order.status == 'CANCELLED' %}bg-red-100 text-red-800
+            {% elif order.status == 'ON_THE_WAY' %}bg-blue-100 text-blue-800
+            {% elif order.status == 'ACCEPTED' %}bg-yellow-100 text-yellow-800
+            {% else %}bg-gray-100 text-gray-800{% endif %}">
+            {{ order.status }}
+        </span>
+    </div>
+    
+    <div class="space-y-2 text-sm mb-4">
+        <p><span class="font-medium">Order Date:</span> {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+        <p><span class="font-medium">Delivery Address:</span> {{ order.delivery_address }}</p>
+        {% if order.delivery_instructions %}
+        <p><span class="font-medium">Instructions:</span> {{ order.delivery_instructions }}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Payment Status -->
+    <div class="mb-4 p-4 bg-gray-50 rounded-lg border-2 {% if order.payment_status == 'PAID' %}border-green-300{% elif order.payment_status == 'NOT_PAID' %}border-red-300{% else %}border-yellow-300{% endif %}">
+        <div class="flex items-center justify-between mb-3">
+            <span class="font-semibold text-gray-800">Payment Status:</span>
+            <span class="px-3 py-1 rounded-full text-xs font-bold
+                {% if order.payment_status == 'PAID' %}bg-green-100 text-green-800
+                {% elif order.payment_status == 'NOT_PAID' %}bg-red-100 text-red-800
+                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                {% if order.payment_status == 'PAID' %}💰 PAID
+                {% elif order.payment_status == 'NOT_PAID' %}❌ NOT PAID
+                {% else %}⏳ PENDING{% endif %}
+            </span>
+        </div>
+        
+        {% if order.buyer_payment_claimed_at and order.payment_status != 'PAID' %}
+        <div class="mb-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+            <p class="text-sm text-yellow-800 font-semibold mb-1">
+                🔔 Buyer Claims Payment Made
+            </p>
+            <p class="text-xs text-yellow-700">
+                Buyer marked as paid on {{ order.buyer_payment_claimed_at.strftime('%B %d, %Y at %I:%M %p') }}
+            </p>
+            <p class="text-xs text-yellow-700 mt-1">
+                Please verify payment and confirm or decline below.
+            </p>
+        </div>
+        {% elif order.buyer_payment_claimed_at and order.payment_status == 'PAID' %}
+        <div class="mb-3 p-2 bg-green-50 border border-green-200 rounded">
+            <p class="text-xs text-green-800">
+                ✅ Payment confirmed. Buyer claimed payment on {{ order.buyer_payment_claimed_at.strftime('%B %d, %Y at %I:%M %p') }}
+            </p>
+        </div>
+        {% endif %}
+        
+        <div class="flex gap-2">
+            <form method="POST" action="{{ url_for('vendor.update_payment_status', order_id=order.id) }}" class="flex-1">
+                <input type="hidden" name="payment_status" value="PAID">
+                <button type="submit" 
+                        class="w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200
+                        {% if order.payment_status == 'PAID' %}
+                        bg-green-500 text-white shadow-md hover:bg-green-600
+                        {% else %}
+                        bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300
+                        {% endif %}">
+                    ✅ Mark as Paid
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('vendor.update_payment_status', order_id=order.id) }}" class="flex-1">
+                <input type="hidden" name="payment_status" value="NOT_PAID">
+                <button type="submit" 
+                        class="w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200
+                        {% if order.payment_status == 'NOT_PAID' %}
+                        bg-red-500 text-white shadow-md hover:bg-red-600
+                        {% else %}
+                        bg-red-100 text-red-700 hover:bg-red-200 border-2 border-red-300
+                        {% endif %}">
+                    ❌ Mark as Not Paid
+                </button>
+            </form>
+        </div>
+        {% if order.payment_status == 'PENDING' %}
+        <form method="POST" action="{{ url_for('vendor.update_payment_status', order_id=order.id) }}" class="mt-2">
+            <input type="hidden" name="payment_status" value="PENDING">
+            <button type="submit" 
+                    class="w-full py-2 px-4 rounded-lg font-medium text-xs bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-2 border-yellow-300">
+                Reset to Pending
+            </button>
+        </form>
+        {% endif %}
+        
+        <p class="text-xs text-gray-600 mt-3 text-center">You can update payment status at any time, even if buyer has marked it as paid</p>
+    </div>
+    
+    <!-- Status Update -->
+    {% if order.status != 'DELIVERED' and order.status != 'CANCELLED' %}
+    <form method="POST" action="{{ url_for('vendor.update_order_status', order_id=order.id) }}" class="mt-4">
+        <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Update Order Status</label>
+        <div class="flex gap-2 mb-3">
+            <select name="status" id="status" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg" onchange="toggleDeliveryFee(this.value)">
+                {% if order.status == 'PENDING' %}
+                <option value="ACCEPTED">Accept Order</option>
+                <option value="CANCELLED">Cancel Order</option>
+                {% elif order.status == 'ACCEPTED' %}
+                <option value="ON_THE_WAY">Mark as On The Way</option>
+                <option value="CANCELLED">Cancel Order</option>
+                {% elif order.status == 'ON_THE_WAY' %}
+                <option value="DELIVERED">Mark as Delivered</option>
+                {% endif %}
+            </select>
+            <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg">
+                Update
+            </button>
+        </div>
+        <!-- Delivery Fee - Required when accepting order -->
+        <div id="deliveryFeeSection" class="mb-3" style="display: none;">
+            <label for="delivery_fee" class="block text-sm font-medium text-gray-700 mb-2">Delivery Fee *</label>
+            <input type="number" id="delivery_fee" name="delivery_fee" step="0.01" min="0" required
+                   value="{% if order.delivery_fee %}{{ order.delivery_fee }}{% else %}0{% endif %}"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                   placeholder="Enter delivery fee">
+            <p class="text-xs text-gray-500 mt-1">This will be added to the order total</p>
+        </div>
+    </form>
+    {% endif %}
+</div>
+
+<!-- Order Items -->
+<div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Items</h2>
+    <div class="space-y-3">
+        {% for item in order.items %}
+        <div class="flex justify-between items-center border-b pb-3 {% if item.is_removed %}opacity-50{% endif %}">
+            <div class="flex-1">
+                <div class="flex items-center gap-2">
+                    <h3 class="font-medium {% if item.is_removed %}text-gray-500 line-through{% else %}text-gray-800{% endif %}">
+                        {{ item.product_name_snapshot }}
+                    </h3>
+                    {% if item.is_removed %}
+                    <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">Removed</span>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-600">KSh {{ "%.2f"|format(item.unit_price_snapshot) }} x {{ item.quantity }}</p>
+                {% if item.is_removed and item.removed_at %}
+                <p class="text-xs text-red-600 mt-1">Removed on {{ item.removed_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-3">
+                {% if not item.is_removed %}
+                <form method="POST" action="{{ url_for('vendor.remove_order_item', order_id=order.id, item_id=item.id) }}" 
+                      onclick="event.stopPropagation();" class="inline">
+                    <button type="submit" 
+                            onclick="return confirm('Remove this item from the order? The buyer will be notified.');"
+                            class="text-red-600 hover:text-red-800 text-sm font-medium">
+                        Remove
+                    </button>
+                </form>
+                {% endif %}
+                <p class="font-semibold {% if item.is_removed %}text-gray-400{% else %}text-primary{% endif %}">
+                    KSh {{ "%.2f"|format(item.unit_price_snapshot * item.quantity) }}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="mt-4 pt-4 border-t space-y-2">
+        <div class="flex justify-between">
+            <span>Subtotal:</span>
+            <span>KSh {{ "%.2f"|format(order.subtotal) }}</span>
+        </div>
+        <div class="flex justify-between">
+            <span>Delivery Fee:</span>
+            <span>
+                {% if order.delivery_fee is not none %}
+                KSh {{ "%.2f"|format(order.delivery_fee) }}
+                {% else %}
+                <span class="text-gray-500">Not set yet</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="flex justify-between text-xl font-bold pt-2 border-t">
+            <span>Total:</span>
+            <span class="text-primary">KSh {{ "%.2f"|format(order.total) }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block bottom_nav %}
+<nav class="bottom-nav">
+    <div class="flex justify-around items-center py-3">
+        <a href="{{ url_for('vendor.dashboard') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            <span class="text-xs mt-1">Dashboard</span>
+        </a>
+        <a href="{{ url_for('vendor.products') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+            <span class="text-xs mt-1">Products</span>
+        </a>
+        <a href="{{ url_for('vendor.orders') }}" class="flex flex-col items-center text-primary">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="text-xs mt-1">Orders</span>
+        </a>
+        <a href="{{ url_for('vendor.profile') }}" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="text-xs mt-1">Profile</span>
+        </a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleDeliveryFee(status) {
+        const deliveryFeeSection = document.getElementById('deliveryFeeSection');
+        const deliveryFeeInput = document.getElementById('delivery_fee');
+        
+        if (status === 'ACCEPTED') {
+            deliveryFeeSection.style.display = 'block';
+            deliveryFeeInput.required = true;
+        } else {
+            deliveryFeeSection.style.display = 'none';
+            deliveryFeeInput.required = false;
+        }
+    }
+    
+    // Check on page load if status is ACCEPTED
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusSelect = document.getElementById('status');
+        if (statusSelect) {
+            toggleDeliveryFee(statusSelect.value);
+        }
+    });
+</script>
+{% endblock %}
+
