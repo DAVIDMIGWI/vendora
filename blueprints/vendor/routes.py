@@ -8,16 +8,26 @@ from upload_utils import save_product_image, delete_product_image, allowed_file
 from . import vendor_bp
 
 def vendor_required(f):
-    """Decorator to ensure user is a vendor with approved status"""
+    """Decorator to ensure user is a vendor - allows PENDING vendors to access dashboard"""
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_vendor():
+        if not current_user.is_authenticated:
             flash('Access denied', 'error')
             return redirect(url_for('auth.login'))
-        if not current_user.vendor_profile or current_user.vendor_profile.status != 'APPROVED':
-            flash('Your vendor account is not approved', 'error')
+        
+        # Check if user has vendor profile
+        if not current_user.vendor_profile:
+            flash('You need to register as a vendor first', 'error')
+            return redirect(url_for('auth.register_vendor'))
+        
+        # Block BLOCKED vendors
+        if current_user.vendor_profile.status == 'BLOCKED':
+            flash('Your vendor account has been blocked', 'error')
             return redirect(url_for('auth.login'))
+        
+        # Allow APPROVED and PENDING vendors (dashboard will show appropriate messages)
+        # Note: Some routes may need additional checks for PENDING status
         return f(*args, **kwargs)
     return decorated_function
 
@@ -26,6 +36,11 @@ def vendor_required(f):
 @vendor_required
 def dashboard():
     """Vendor dashboard"""
+    # Set active role to vendor if not set
+    from flask import session
+    if session.get('active_role') != 'vendor':
+        session['active_role'] = 'vendor'
+    
     vendor = current_user.vendor_profile
     
     # Today's orders

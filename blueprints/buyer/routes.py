@@ -34,13 +34,15 @@ def get_cart_count():
 @login_required
 def vendors_list():
     """Vendor listing page with category and distance filters"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
     
     # Get filter parameters
     category_id = request.args.get('category', type=int)
-    max_distance = request.args.get('distance', type=float, default=2.0)
+    distance_input = request.args.get('distance', type=float, default=1.0)
+    # Allow only 0.2 (200m), 0.5 (500m), or 1.0 (1km) - default to 1.0
+    max_distance = 1.0 if distance_input not in [0.2, 0.5, 1.0] else distance_input
     search = request.args.get('search', '').strip()
     
     # Get all categories
@@ -68,7 +70,7 @@ def vendors_list():
                 (v.location and search_lower in v.location.lower()))
         ]
     
-    # Filter vendors by location (1-2km radius)
+    # Filter vendors by location (1km radius max)
     vendors_with_distance = get_vendors_within_radius(
         all_vendors, 
         current_user.latitude, 
@@ -87,9 +89,15 @@ def vendors_list():
 @login_required
 def home():
     """Buyer home page with products and vendors"""
-    if not current_user.is_buyer():
+    # Check if user can be a buyer (all users can be buyers)
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
+    
+    # Set active role to buyer if not set
+    from flask import session
+    if session.get('active_role') != 'buyer':
+        session['active_role'] = 'buyer'
     
     # Get all categories
     categories = Category.query.all()
@@ -98,12 +106,14 @@ def home():
     search = request.args.get('search', '').strip()
     category_id = request.args.get('category', type=int)
     search_type = request.args.get('type', 'vendors')  # 'products' or 'vendors'
-    max_distance = request.args.get('distance', type=float, default=2.0)  # Default 2km radius
+    distance_input = request.args.get('distance', type=float, default=1.0)
+    # Allow only 0.2 (200m), 0.5 (500m), or 1.0 (1km) - default to 1.0
+    max_distance = 1.0 if distance_input not in [0.2, 0.5, 1.0] else distance_input
     
     # Get all approved and online vendors
     all_vendors = Vendor.query.filter_by(status='APPROVED', is_online=True).all()
     
-    # Filter vendors by location (1-2km radius)
+    # Filter vendors by location (1km radius max)
     vendors_with_distance = get_vendors_within_radius(
         all_vendors, 
         current_user.latitude, 
@@ -166,7 +176,7 @@ def home():
 @login_required
 def vendor_view(vendor_id):
     """View vendor and their products"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
     
@@ -205,7 +215,7 @@ def vendor_view(vendor_id):
 @login_required
 def cart():
     """View cart"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
     
@@ -253,7 +263,7 @@ def cart():
 @login_required
 def add_to_cart():
     """Add product to cart"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         if request.is_json:
             return jsonify({'success': False, 'error': 'Access denied'}), 403
         flash('Access denied', 'error')
@@ -312,7 +322,7 @@ def add_to_cart():
 @login_required
 def update_cart():
     """Update cart item quantity"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         if request.is_json:
             return jsonify({'success': False, 'error': 'Access denied'}), 403
         flash('Access denied', 'error')
@@ -360,7 +370,7 @@ def update_cart():
 @login_required
 def remove_from_cart():
     """Remove item from cart"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         if request.is_json:
             return jsonify({'success': False, 'error': 'Access denied'}), 403
         flash('Access denied', 'error')
@@ -389,7 +399,7 @@ def remove_from_cart():
 @login_required
 def checkout():
     """Checkout and place order"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
     
@@ -432,14 +442,15 @@ def checkout():
                         float(delivery_lat), float(delivery_lon),
                         float(vendor.latitude), float(vendor.longitude)
                     )
-                    if distance > 2.0:  # More than 2 km
+                    if distance > 1.0:  # More than 1 km
                         invalid_vendors.append({
                             'name': vendor.shop_name,
                             'distance': round(distance, 2)
                         })
             
             if invalid_vendors:
-                error = f"Delivery location is too far from: {', '.join([v['name'] + f' ({v['distance']} km)' for v in invalid_vendors])}. Please select a location within 1-2 km from all vendors."
+                vendor_list = ', '.join([v['name'] + f' ({v["distance"]} km)' for v in invalid_vendors])
+                error = f"Delivery location is too far from: {vendor_list}. Please select a location within 1 km from all vendors."
                 if request.is_json:
                     return jsonify({'success': False, 'error': error}), 400
                 flash(error, 'error')
@@ -701,9 +712,15 @@ def checkout():
 @login_required
 def orders():
     """View buyer orders"""
-    if not current_user.is_buyer():
+    # Check if user can be a buyer (all users can be buyers)
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
+    
+    # Set active role to buyer if not set
+    from flask import session
+    if session.get('active_role') != 'buyer':
+        session['active_role'] = 'buyer'
     
     # Filter by status if provided
     status_filter = request.args.get('status', '')
@@ -720,7 +737,7 @@ def orders():
 @login_required
 def get_orders_status():
     """API endpoint to get order statuses for real-time updates"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         return jsonify({'success': False, 'error': 'Access denied'}), 403
     
     # Get all orders for the buyer
@@ -746,7 +763,7 @@ def get_orders_status():
 @login_required
 def order_detail(order_id):
     """View order details"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
     
@@ -762,7 +779,7 @@ def order_detail(order_id):
 @login_required
 def mark_order_paid(order_id):
     """Buyer claims to have paid - notifies vendor"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         if request.is_json:
             return jsonify({'success': False, 'error': 'Access denied'}), 403
         flash('Access denied', 'error')
@@ -795,7 +812,7 @@ def mark_order_paid(order_id):
 @login_required
 def profile():
     """Buyer profile - manage primary address and location"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         flash('Access denied', 'error')
         return redirect(url_for('auth.login'))
     
@@ -860,7 +877,7 @@ def profile():
 @login_required
 def update_location():
     """Update user location coordinates"""
-    if not current_user.is_buyer():
+    if not current_user.can_be_buyer():
         return jsonify({'success': False, 'error': 'Access denied'}), 403
     
     data = request.get_json()

@@ -43,7 +43,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     
     return round(distance, 2)
 
-def get_vendors_within_radius(vendors, user_lat, user_lon, max_radius_km=2.0):
+def get_vendors_within_radius(vendors, user_lat, user_lon, max_radius_km=1.0):
     """
     Filter vendors within a specified radius from user's location.
     
@@ -51,11 +51,15 @@ def get_vendors_within_radius(vendors, user_lat, user_lon, max_radius_km=2.0):
         vendors: List of Vendor objects
         user_lat: User's latitude
         user_lon: User's longitude
-        max_radius_km: Maximum radius in kilometers (default 2.0)
+        max_radius_km: Maximum radius in kilometers (default 1.0, max 1.0)
     
     Returns:
         List of tuples: (vendor, distance_km) sorted by distance
     """
+    # Enforce maximum of 1km (allow 0.2, 0.5, or 1.0)
+    if max_radius_km not in [0.2, 0.5, 1.0]:
+        max_radius_km = min(max_radius_km, 1.0)
+    
     if not user_lat or not user_lon:
         # If user has no location, return all vendors without distance
         return [(v, None) for v in vendors]

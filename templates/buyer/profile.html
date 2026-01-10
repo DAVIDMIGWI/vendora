@@ -8,51 +8,56 @@
     <p class="text-gray-600">Manage your personal information, address, and preferences</p>
 </div>
 
-<form method="POST" action="{{ url_for('buyer.profile') }}" id="profileForm" class="bg-white rounded-lg shadow-md p-6 space-y-6">
+<form method="POST" action="{{ url_for('buyer.profile') }}" id="profileForm"
+    class="bg-white rounded-lg shadow-md p-6 space-y-6">
     <div>
         <label for="name" class="block text-gray-700 text-sm font-medium mb-2">Full Name *</label>
         <input type="text" id="name" name="name" value="{{ current_user.name }}" required
-               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
     </div>
-    
+
     <div>
         <label for="email" class="block text-gray-700 text-sm font-medium mb-2">Email</label>
         <input type="email" id="email" value="{{ current_user.email }}" disabled
-               class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600">
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600">
         <p class="text-xs text-gray-500 mt-1">Email cannot be changed</p>
     </div>
-    
+
     <div>
         <label for="phone" class="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
         <input type="tel" id="phone" name="phone" value="{{ current_user.phone or '' }}"
-               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
     </div>
-    
+
     <!-- Primary Address Section -->
     <div class="border-t pt-6 mt-6">
         <h2 class="text-xl font-bold text-gray-800 mb-2">Saved Locations</h2>
         <p class="text-sm text-gray-600 mb-4">Set your delivery address and location for finding nearby vendors</p>
-        
+
         <div class="mb-4">
             <label for="primary_address" class="block text-gray-700 text-sm font-medium mb-2">Full Address *</label>
             <textarea id="primary_address" name="primary_address" rows="4" required
-                      placeholder="e.g. Green Street, Block B, House 42, Kilimani, Nairobi"
-                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">{{ current_user.primary_address or '' }}</textarea>
-            <p class="text-xs text-gray-500 mt-1">Enter your complete delivery address including street, house number, area/estate, and city</p>
+                placeholder="e.g. Green Street, Block B, House 42, Kilimani, Nairobi"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">{{ current_user.primary_address or '' }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">Enter your complete delivery address including street, house number,
+                area/estate, and city</p>
         </div>
-        
+
         <!-- Location Map (for distance calculation) -->
         <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-medium mb-2">Location Coordinates (for finding nearby vendors)</label>
-            <p class="text-xs text-gray-500 mb-2">Your location is saved and used to find vendors near you. Only update this if you move to a new address.</p>
-            
+            <label class="block text-gray-700 text-sm font-medium mb-2">Location Coordinates (for finding nearby
+                vendors)</label>
+            <p class="text-xs text-gray-500 mb-2">Your location is saved and used to find vendors near you. Only update
+                this if you move to a new address.</p>
+
             {% if current_user.latitude and current_user.longitude %}
             <div class="p-3 bg-green-50 border-l-4 border-green-400 rounded mb-3">
                 <p class="text-sm text-gray-700">
                     <span class="font-semibold">✓ Location Saved:</span><br>
                     Coordinates: {{ "%.6f"|format(current_user.latitude) }}, {{ "%.6f"|format(current_user.longitude) }}
                 </p>
-                <p class="text-xs text-gray-600 mt-1">This location is used to find nearby vendors. Update only if you move.</p>
+                <p class="text-xs text-gray-600 mt-1">This location is used to find nearby vendors. Update only if you
+                    move.</p>
             </div>
             {% else %}
             <div class="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded mb-3">
@@ -62,27 +67,47 @@
                 </p>
             </div>
             {% endif %}
-            
+
             <!-- Hidden inputs for form submission -->
-            <input type="hidden" id="latitude" name="latitude" 
-                   value="{% if current_user.latitude %}{{ current_user.latitude }}{% endif %}">
+            <input type="hidden" id="latitude" name="latitude"
+                value="{% if current_user.latitude %}{{ current_user.latitude }}{% endif %}">
             <input type="hidden" id="longitude" name="longitude"
-                   value="{% if current_user.longitude %}{{ current_user.longitude }}{% endif %}">
-            
+                value="{% if current_user.longitude %}{{ current_user.longitude }}{% endif %}">
+
+            <!-- Location Search Input -->
+            <div class="mb-3">
+                <label class="block text-gray-700 text-sm font-medium mb-2">Search Location</label>
+                <div class="relative">
+                    <input type="text" id="locationSearch"
+                        placeholder="Search for a location (e.g., Westlands, Nairobi)..."
+                        class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Type to search and select from suggestions, or use the button
+                    below for current location</p>
+            </div>
+
             <!-- Map container -->
             <div id="locationMap" class="w-full h-64 rounded-lg border border-gray-300 mb-2" style="z-index: 1;"></div>
-            
-            <button type="button" onclick="getCurrentLocation()" 
-                    class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+
+            <button type="button" onclick="getCurrentLocation(event)"
+                class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 Use My Current Location
             </button>
-            <p class="text-xs text-gray-500 mt-1">Click on the map or use current location to set coordinates. This is saved permanently until you change it.</p>
+            <p class="text-xs text-gray-500 mt-1">Click on the map or use current location to set coordinates. This is
+                saved permanently until you change it.</p>
         </div>
-        
+
         {% if current_user.primary_address %}
         <div class="p-4 bg-green-50 border-l-4 border-primary rounded">
             <p class="text-sm text-gray-700">
@@ -92,10 +117,10 @@
         </div>
         {% endif %}
     </div>
-    
+
     <div class="flex gap-3 pt-4 border-t">
-        <button type="submit" 
-                class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
+        <button type="submit"
+            class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>
@@ -107,14 +132,17 @@
 
 {% block extra_css %}
 <style>
-    #locationMap { min-height: 300px; width: 100%; }
+    #locationMap {
+        min-height: 300px;
+        width: 100%;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     let map, marker;
-    
+
     // Show notice that location will be saved
     function showLocationSavedNotice() {
         const notice = document.createElement('div');
@@ -127,7 +155,7 @@
             setTimeout(() => notice.remove(), 300);
         }, 3000);
     }
-    
+
     // Initialize map - define function before loading Google Maps script
     function initMap() {
         {% if not config.GOOGLE_MAPS_API_KEY %}
@@ -138,7 +166,7 @@
         }
         return;
         {% endif %}
-        
+
         // Check if Google Maps is loaded
         if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
             const mapDiv = document.getElementById('locationMap');
@@ -147,163 +175,279 @@
             }
             return;
         }
-        
+
         // Default to Nairobi center if no location set
         const defaultLat = {% if current_user.latitude %}{{ current_user.latitude }}{% else %}-1.2921{% endif %};
         const defaultLon = {% if current_user.longitude %}{{ current_user.longitude }}{% else %}36.8219{% endif %};
         
         const defaultLocation = { lat: defaultLat, lng: defaultLon };
         
-        const mapDiv = document.getElementById('locationMap');
-        if (!mapDiv) {
-            return;
-        }
-        
         // Create map centered on user's location or Nairobi
-        try {
-            map = new google.maps.Map(mapDiv, {
+        map = new google.maps.Map(document.getElementById('locationMap'), {
             center: defaultLocation,
             zoom: defaultLat !== -1.2921 || defaultLon !== 36.8219 ? 15 : 13,
             mapTypeControl: true,
             streetViewControl: true,
             fullscreenControl: true
-            });
-        } catch (error) {
-            mapDiv.innerHTML = '<div class="p-8 text-center text-red-500"><p class="mb-2">Error creating map.</p><p class="text-sm">' + error.message + '</p></div>';
-            return;
-        }
+        });
         
+        // Initialize Places Autocomplete
+        const searchInput = document.getElementById('locationSearch');
+        if (searchInput) {
+            const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+                fields: ['geometry', 'formatted_address', 'name']
+            });
+            
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                
+                if (!place.geometry || !place.geometry.location) {
+                    alert('No details available for this location');
+                    return;
+                }
+                
+                const location = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
+                
+                // Update map center
+                map.setCenter(location);
+                map.setZoom(15);
+                
+                // Update hidden inputs
+                document.getElementById('latitude').value = location.lat.toFixed(8);
+                document.getElementById('longitude').value = location.lng.toFixed(8);
+                
+                // Update or create marker
+                if (marker) {
+                    marker.setPosition(location);
+                } else {
+                    marker = new google.maps.Marker({
+                        position: location,
+                        map: map,
+                        title: place.formatted_address || place.name,
+                        draggable: true
+                    });
+
+                    // Update inputs when marker is dragged
+                    marker.addListener('dragend', function () {
+                        const position = marker.getPosition();
+                        document.getElementById('latitude').value = position.lat().toFixed(8);
+                        document.getElementById('longitude').value = position.lng().toFixed(8);
+                    });
+                }
+
+                // Show info window
+                const infoWindow = new google.maps.InfoWindow({
+                    content: '<strong>' + (place.name || place.formatted_address) + '</strong><br>' +
+                        (place.formatted_address || '') +
+                        '<br><small style="color: #666;">Drag the marker to adjust</small>'
+                });
+                infoWindow.open(map, marker);
+
+                // Show notification that location will be saved
+                if (typeof showLocationSavedNotice === 'function') {
+                    showLocationSavedNotice();
+                }
+            });
+        }
+
         // Add marker if location exists
         if (defaultLat !== -1.2921 || defaultLon !== 36.8219) {
+        marker = new google.maps.Marker({
+            position: defaultLocation,
+            map: map,
+            title: 'Your current location',
+            draggable: true
+        });
+
+        // Info window
+        const infoWindow = new google.maps.InfoWindow({
+            content: '<strong>Your current location</strong><br>Drag the marker to adjust<br><small style="color: #666;">This will be saved permanently</small>'
+        });
+        marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+        });
+        infoWindow.open(map, marker);
+
+        // Show notification that location will be saved
+        if (typeof showLocationSavedNotice === 'function') {
+            showLocationSavedNotice();
+        }
+
+        // Update inputs when marker is dragged
+        marker.addListener('dragend', function () {
+            const position = marker.getPosition();
+            document.getElementById('latitude').value = position.lat().toFixed(8);
+            document.getElementById('longitude').value = position.lng().toFixed(8);
+        });
+        }
+
+        // Handle map click to set location
+        map.addListener('click', function (e) {
+        const lat = e.latLng.lat();
+        const lon = e.latLng.lng();
+
+        // Update hidden inputs
+        document.getElementById('latitude').value = lat.toFixed(8);
+        document.getElementById('longitude').value = lon.toFixed(8);
+
+        // Update or create marker
+        if (marker) {
+            marker.setPosition({ lat: lat, lng: lon });
+        } else {
             marker = new google.maps.Marker({
-                position: defaultLocation,
+                position: { lat: lat, lng: lon },
                 map: map,
-                title: 'Your current location',
+                title: 'Selected location',
                 draggable: true
             });
-            
-            // Info window
-            const infoWindow = new google.maps.InfoWindow({
-                content: '<strong>Your current location</strong><br>Drag the marker to adjust<br><small style="color: #666;">This will be saved permanently</small>'
-            });
-            marker.addListener('click', () => {
-                infoWindow.open(map, marker);
-            });
-            infoWindow.open(map, marker);
-            
-            // Show notification that location will be saved
-            if (typeof showLocationSavedNotice === 'function') {
-                showLocationSavedNotice();
-            }
-            
+
             // Update inputs when marker is dragged
-            marker.addListener('dragend', function() {
+            marker.addListener('dragend', function () {
                 const position = marker.getPosition();
                 document.getElementById('latitude').value = position.lat().toFixed(8);
                 document.getElementById('longitude').value = position.lng().toFixed(8);
             });
         }
-        
-        // Handle map click to set location
-        map.addListener('click', function(e) {
-            const lat = e.latLng.lat();
-            const lon = e.latLng.lng();
-            
-            // Update hidden inputs
-            document.getElementById('latitude').value = lat.toFixed(8);
-            document.getElementById('longitude').value = lon.toFixed(8);
-            
-            // Update or create marker
-            if (marker) {
-                marker.setPosition({ lat: lat, lng: lon });
-            } else {
-                marker = new google.maps.Marker({
-                    position: { lat: lat, lng: lon },
-                    map: map,
-                    title: 'Selected location',
-                    draggable: true
-                });
-                
-                // Update inputs when marker is dragged
-                marker.addListener('dragend', function() {
-                    const position = marker.getPosition();
-                    document.getElementById('latitude').value = position.lat().toFixed(8);
-                    document.getElementById('longitude').value = position.lng().toFixed(8);
-                });
-            }
-            
-            // Show info window
-            const infoWindow = new google.maps.InfoWindow({
-                content: '<strong>Selected location</strong><br>Drag the marker to adjust<br><small style="color: #666;">This will be saved permanently</small>'
-            });
-            infoWindow.open(map, marker);
-            
-            // Show notification that location will be saved
-            if (typeof showLocationSavedNotice === 'function') {
-                showLocationSavedNotice();
-            }
+
+        // Show info window
+        const infoWindow = new google.maps.InfoWindow({
+            content: '<strong>Selected location</strong><br>Drag the marker to adjust<br><small style="color: #666;">This will be saved permanently</small>'
         });
-    }
-    
-    function getCurrentLocation() {
+        infoWindow.open(map, marker);
+
+        // Show notification that location will be saved
+        if (typeof showLocationSavedNotice === 'function') {
+            showLocationSavedNotice();
+        }
+        });
+        }
+
+    function getCurrentLocation(event) {
+        // Check if map is initialized
+        if (!map) {
+            alert('Map is not ready yet. Please wait a moment and try again.');
+            return;
+        }
+
         if (navigator.geolocation) {
+            // Show loading state
+            let button = null;
+            if (event && event.target) {
+                button = event.target.closest('button') || event.target;
+            } else {
+                button = document.querySelector('button[onclick*="getCurrentLocation"]');
+            }
+            let originalText = '';
+            if (button) {
+                originalText = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<span class="animate-spin inline-block">⏳</span> Getting location...';
+
+                setTimeout(() => {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                    }
+                }, 10000);
+            }
+
             navigator.geolocation.getCurrentPosition(
-                function(position) {
+                function (position) {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    
+
                     // Update hidden inputs
                     document.getElementById('latitude').value = lat.toFixed(8);
                     document.getElementById('longitude').value = lon.toFixed(8);
-                    
+
                     // Update map center
                     const location = { lat: lat, lng: lon };
-                    map.setCenter(location);
-                    map.setZoom(15);
-                    
+                    if (map) {
+                        map.setCenter(location);
+                        map.setZoom(15);
+                    }
+
                     // Update or create marker
                     if (marker) {
                         marker.setPosition(location);
-                    } else {
+                    } else if (map) {
                         marker = new google.maps.Marker({
                             position: location,
                             map: map,
                             title: 'Your current location',
                             draggable: true
                         });
-                        
+
                         // Update inputs when marker is dragged
-                        marker.addListener('dragend', function() {
+                        marker.addListener('dragend', function () {
                             const position = marker.getPosition();
                             document.getElementById('latitude').value = position.lat().toFixed(8);
                             document.getElementById('longitude').value = position.lng().toFixed(8);
                         });
                     }
-                    
+
                     // Show info window
-                    const infoWindow = new google.maps.InfoWindow({
-                        content: '<strong>Your current location</strong><br>Drag the marker to adjust'
-                    });
-                    infoWindow.open(map, marker);
+                    if (marker && map) {
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: '<strong>Your current location</strong><br>Drag the marker to adjust<br><small style="color: #666;">This will be saved permanently</small>'
+                        });
+                        infoWindow.open(map, marker);
+                    }
+
+                    // Show notification that location will be saved
+                    if (typeof showLocationSavedNotice === 'function') {
+                        showLocationSavedNotice();
+                    }
+
+                    // Reset button
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                    }
                 },
-                function(error) {
-                    alert('Unable to get your location. Please click on the map to set your location or check your browser permissions.');
-                    console.error('Geolocation error:', error);
+                function (error) {
+                    let errorMessage = 'Unable to get your location. ';
+                    // error.code: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+                    if (error.code === 1) {
+                        errorMessage += 'Please allow location access in your browser settings and try again.';
+                    } else if (error.code === 2) {
+                        errorMessage += 'Location information is unavailable. Please try again or click on the map to set location manually.';
+                    } else if (error.code === 3) {
+                        errorMessage += 'Request timed out. Please try again or click on the map to set location manually.';
+                    } else {
+                        errorMessage += 'Please click on the map to set your location manually.';
+                    }
+                    alert(errorMessage);
+                    console.error('Geolocation error:', error.code, error.message);
+
+                    // Reset button
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
         } else {
             alert('Geolocation is not supported by your browser. Please click on the map to set your location.');
         }
     }
-    
+
     // Load Google Maps script after initMap is defined
     {% if config.GOOGLE_MAPS_API_KEY %}
-    (function() {
+    (function () {
         const script = document.createElement('script');
         script.src = 'https://maps.googleapis.com/maps/api/js?key={{ config.GOOGLE_MAPS_API_KEY }}&callback=initMap&libraries=places';
         script.async = true;
         script.defer = true;
-        script.onerror = function() {
+        script.onerror = function () {
             const mapDiv = document.getElementById('locationMap');
             if (mapDiv) {
                 mapDiv.innerHTML = '<div class="p-8 text-center text-red-500"><p class="mb-2">Failed to load Google Maps.</p><p class="text-sm">Please check your API key and network connection.</p></div>';
@@ -327,32 +471,40 @@
     <div class="flex justify-around items-center py-3">
         <a href="{{ url_for('buyer.home') }}" class="flex flex-col items-center text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                </path>
             </svg>
             <span class="text-xs mt-1">Home</span>
         </a>
         <a href="{{ url_for('buyer.cart') }}" class="flex flex-col items-center text-gray-600 relative">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
+                </path>
             </svg>
             {% if cart_count > 0 %}
-            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{{ cart_count }}</span>
+            <span
+                class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{{
+                cart_count }}</span>
             {% endif %}
             <span class="text-xs mt-1">Cart</span>
         </a>
         <a href="{{ url_for('buyer.orders') }}" class="flex flex-col items-center text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                </path>
             </svg>
             <span class="text-xs mt-1">Orders</span>
         </a>
         <a href="{{ url_for('buyer.profile') }}" class="flex flex-col items-center text-primary">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
             </svg>
             <span class="text-xs mt-1">Profile</span>
         </a>
     </div>
 </nav>
 {% endblock %}
-

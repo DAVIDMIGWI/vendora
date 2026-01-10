@@ -42,6 +42,18 @@ class User(UserMixin, db.Model):
     def is_buyer(self):
         return self.role == 'BUYER'
     
+    def can_be_vendor(self):
+        """Check if user can act as vendor (has approved vendor profile)"""
+        return self.vendor_profile and self.vendor_profile.status == 'APPROVED'
+    
+    def can_be_buyer(self):
+        """All users can be buyers"""
+        return True
+    
+    def has_multiple_roles(self):
+        """Check if user can choose between multiple roles"""
+        return self.can_be_vendor() and self.can_be_buyer()
+    
     def __repr__(self):
         return f'<User {self.email}>'
 

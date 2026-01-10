@@ -69,6 +69,12 @@
             <input type="hidden" id="delivery_latitude" name="delivery_latitude" value="">
             <input type="hidden" id="delivery_longitude" name="delivery_longitude" value="">
             
+            <!-- Location Search Input -->
+            <div class="mb-2">
+                <input type="text" id="deliveryLocationSearch" placeholder="Search for a delivery location..." 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            
             <!-- Map container -->
             <div id="deliveryMap" class="w-full h-64 rounded-lg border border-gray-300 mb-2" style="z-index: 1;"></div>
             
@@ -258,6 +264,33 @@
                 bounds.extend({ lat: v.lat, lng: v.lng });
             });
             deliveryMap.fitBounds(bounds);
+        }
+        
+        // Initialize Places Autocomplete for delivery location
+        const searchInput = document.getElementById('deliveryLocationSearch');
+        if (searchInput) {
+            const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+                fields: ['geometry', 'formatted_address', 'name']
+            });
+            
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                
+                if (!place.geometry || !place.geometry.location) {
+                    alert('No details available for this location');
+                    return;
+                }
+                
+                const location = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
+                
+                // Update delivery location
+                setDeliveryLocation(location.lat, location.lng);
+                deliveryMap.setCenter(location);
+                deliveryMap.setZoom(15);
+            });
         }
         {% endif %}
     }

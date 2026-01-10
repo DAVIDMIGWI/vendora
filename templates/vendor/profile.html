@@ -103,6 +103,12 @@
         <input type="hidden" id="longitude" name="longitude"
                value="{% if vendor.longitude %}{{ vendor.longitude }}{% endif %}">
         
+        <!-- Location Search Input -->
+        <div class="mb-2">
+            <input type="text" id="locationSearch" placeholder="Search for a location..." 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+        </div>
+        
         <!-- Map container -->
         <div id="locationMap" class="w-full h-64 rounded-lg border border-gray-300 mb-2" style="z-index: 1;"></div>
         
@@ -222,6 +228,68 @@
             streetViewControl: true,
             fullscreenControl: true
         });
+        
+        // Initialize Places Autocomplete
+        const searchInput = document.getElementById('locationSearch');
+        if (searchInput) {
+            const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+                fields: ['geometry', 'formatted_address', 'name']
+            });
+            
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                
+                if (!place.geometry || !place.geometry.location) {
+                    alert('No details available for this location');
+                    return;
+                }
+                
+                const location = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
+                
+                // Update map center
+                map.setCenter(location);
+                map.setZoom(15);
+                
+                // Update hidden inputs
+                document.getElementById('latitude').value = location.lat.toFixed(8);
+                document.getElementById('longitude').value = location.lng.toFixed(8);
+                
+                // Update or create marker
+                if (marker) {
+                    marker.setPosition(location);
+                } else {
+                    marker = new google.maps.Marker({
+                        position: location,
+                        map: map,
+                        title: place.formatted_address || place.name,
+                        draggable: true
+                    });
+                    
+                    // Update inputs when marker is dragged
+                    marker.addListener('dragend', function() {
+                        const position = marker.getPosition();
+                        document.getElementById('latitude').value = position.lat().toFixed(8);
+                        document.getElementById('longitude').value = position.lng().toFixed(8);
+                    });
+                }
+                
+                // Show info window
+                const infoWindow = new google.maps.InfoWindow({
+                    content: '<strong>' + (place.name || place.formatted_address) + '</strong><br>' + 
+                            (place.formatted_address || '') + 
+                            '<br><small style="color: #666;">Drag the marker to adjust<br>This will be saved permanently</small>'
+                });
+                infoWindow.open(map, marker);
+                
+                // Show notification that location will be saved
+                if (typeof showLocationSavedNotice === 'function') {
+                    showLocationSavedNotice();
+                }
+            });
+        }
         
         // Add marker if location exists
         if (defaultLat !== -1.2921 || defaultLon !== 36.8219) {

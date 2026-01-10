@@ -39,17 +39,17 @@
             <span class="text-sm font-medium text-gray-700">Show vendors within:</span>
         </div>
         <div class="flex gap-2">
-            <a href="{{ url_for('buyer.home', distance=1, category=category_id, search=search, type=search_type) }}" 
+            <a href="{{ url_for('buyer.home', distance=0.2, category=category_id, search=search, type=search_type) }}" 
+               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 0.2 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+                200 m
+            </a>
+            <a href="{{ url_for('buyer.home', distance=0.5, category=category_id, search=search, type=search_type) }}" 
+               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 0.5 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+                500 m
+            </a>
+            <a href="{{ url_for('buyer.home', distance=1.0, category=category_id, search=search, type=search_type) }}" 
                class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 1.0 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
                 1 km
-            </a>
-            <a href="{{ url_for('buyer.home', distance=2, category=category_id, search=search, type=search_type) }}" 
-               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 2.0 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
-                2 km
-            </a>
-            <a href="{{ url_for('buyer.home', distance=5, category=category_id, search=search, type=search_type) }}" 
-               class="px-3 py-1 rounded-full text-xs font-medium {% if max_distance == 5.0 %}bg-primary text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
-                5 km
             </a>
         </div>
     </div>
