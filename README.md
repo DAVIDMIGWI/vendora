@@ -69,14 +69,26 @@ python app.py
 The application will:
 
 - Create all database tables automatically
-- Create a default admin user: `admin@vendora.com` / `admin123` (CHANGE THIS IN PRODUCTION!)
+- Optionally bootstrap an admin user via environment variables (recommended)
 
-## Default Admin Credentials
+## Admin Bootstrapping (Recommended)
 
-- **Email**: admin@vendora.com
-- **Password**: admin123
+For security, Vendora no longer hardcodes default admin credentials in the repo.
 
-⚠️ **IMPORTANT**: Change these credentials in production!
+To create (or reset) an admin user at startup, set:
+
+```bash
+export VENDORA_BOOTSTRAP_ADMIN_EMAIL='admin@example.com'
+export VENDORA_BOOTSTRAP_ADMIN_PASSWORD='choose-a-strong-password'
+export VENDORA_BOOTSTRAP_ADMIN_NAME='Admin'                # optional
+export VENDORA_BOOTSTRAP_ADMIN_RESET='true'                # optional: reset existing user's password
+```
+
+Then start the app normally.
+
+### List admin accounts (no passwords)
+
+Admin passwords are stored hashed and cannot be retrieved. To list admin users, query your DB for users with `role='ADMIN'`.
 
 ## Project Structure
 

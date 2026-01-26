@@ -4,19 +4,25 @@
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <img src="{{ url_for('static', filename='favicon.svg') }}" alt="Vendora Logo" class="w-10 h-10">
-                {% set auth_page_endpoints = ['login', 'register_buyer', 'register_vendor', 'select_role'] %}
+                {% set auth_page_endpoints = ['login', 'register_buyer', 'register_vendor', 'select_role',
+                'auth.forgot_password', 'auth.reset_password', 'forgot_password', 'reset_password'] %}
                 {% set is_auth_page = request.endpoint in auth_page_endpoints %}
-                <a href="{% if is_auth_page %}{{ url_for('landing') }}{% elif current_user.is_authenticated %}{% if current_user.is_admin() %}{{ url_for('admin.dashboard') }}{% elif current_user.is_vendor() %}{{ url_for('vendor.dashboard') }}{% else %}{{ url_for('buyer.home') }}{% endif %}{% else %}{{ url_for('landing') }}{% endif %}"
-                    class="text-xl font-bold text-gray-800">Vendora</a>
+                <!-- Brand/Home should always take the user to the public landing page -->
+                <a href="{{ url_for('landing') }}" class="text-xl font-bold text-gray-800">Vendora</a>
             </div>
 
             {% if is_auth_page %}
             <!-- Minimal auth-page navbar (no role switcher, no logout) -->
             <nav class="hidden md:flex items-center space-x-6">
-                <a href="{{ url_for('how_it_works') }}" class="text-gray-700 hover:text-primary font-medium transition-colors duration-150">How It Works</a>
-                <a href="{{ url_for('about') }}" class="text-gray-700 hover:text-primary font-medium transition-colors duration-150">About Us</a>
-                <a href="{{ url_for('help') }}" class="text-gray-700 hover:text-primary font-medium transition-colors duration-150">Help</a>
-                <a href="{{ url_for('landing') }}" class="ml-4 px-4 py-2 border border-primary text-primary rounded-full font-semibold transition-colors duration-150 hover:bg-primary hover:text-white">Back to Home</a>
+                <a href="{{ url_for('how_it_works') }}"
+                    class="text-gray-700 hover:text-primary font-medium transition-colors duration-150">How It Works</a>
+                <a href="{{ url_for('about') }}"
+                    class="text-gray-700 hover:text-primary font-medium transition-colors duration-150">About Us</a>
+                <a href="{{ url_for('help') }}"
+                    class="text-gray-700 hover:text-primary font-medium transition-colors duration-150">Help</a>
+                <a href="{{ url_for('landing') }}"
+                    class="ml-4 px-4 py-2 border border-primary text-primary rounded-full font-semibold transition-colors duration-150 hover:bg-primary hover:text-white">Back
+                    to Home</a>
             </nav>
             <div class="md:hidden flex items-center">
                 <a href="{{ url_for('landing') }}" class="text-gray-700 hover:text-primary font-medium text-sm">
@@ -27,6 +33,10 @@
             <!-- Authenticated User Navbar -->
             <nav class="hidden md:flex items-center space-x-6">
                 {% set active_role = session.get('active_role') %}
+
+                <!-- Always-available Home link (public landing page) -->
+                <a href="{{ url_for('landing') }}" class="text-gray-700 hover:text-primary">Home</a>
+
                 {% if current_user.has_multiple_roles() %}
                 <!-- Role Switcher Dropdown -->
                 <div class="relative group">
@@ -79,7 +89,7 @@
                 <a href="{{ url_for('vendor.orders') }}" class="text-gray-700 hover:text-primary">Orders</a>
                 <a href="{{ url_for('vendor.profile') }}" class="text-gray-700 hover:text-primary">Profile</a>
                 {% elif active_role == 'buyer' or (not active_role and current_user.can_be_buyer()) %}
-                <a href="{{ url_for('buyer.home') }}" class="text-gray-700 hover:text-primary">Home</a>
+                <a href="{{ url_for('buyer.home') }}" class="text-gray-700 hover:text-primary">Shop</a>
                 <a href="{{ url_for('buyer.orders') }}" class="text-gray-700 hover:text-primary">Orders</a>
                 <a href="{{ url_for('buyer.profile') }}" class="text-gray-700 hover:text-primary">Profile</a>
                 {% elif current_user.is_admin() %}
@@ -93,6 +103,7 @@
                     class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium">Logout</a>
             </nav>
             <div class="md:hidden flex items-center space-x-3">
+                <a href="{{ url_for('landing') }}" class="text-gray-700 hover:text-primary font-medium text-sm">Home</a>
                 {% if current_user.can_be_buyer() and cart_count > 0 %}
                 <a href="{{ url_for('buyer.cart') }}" class="relative">
                     <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">

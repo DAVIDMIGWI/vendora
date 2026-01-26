@@ -307,13 +307,13 @@ def seed_data():
         print("\n✅ Sample data seeded successfully!")
         print("\n📋 Sample Accounts:")
         print("\n👥 Buyers:")
-        print("  • john@example.com / password123")
-        print("  • jane@example.com / password123")
+        print("  • john@example.com")
+        print("  • jane@example.com")
         print("\n🏪 Vendors:")
-        print("  • mary@vendor.com / vendor123 (Fresh Greens Market)")
-        print("  • peter@vendor.com / vendor123 (Kamau Butchery & More)")
+        print("  • mary@vendor.com (Fresh Greens Market)")
+        print("  • peter@vendor.com (Kamau Butchery & More)")
         print("\n👑 Admin:")
-        print("  • admin@vendora.com / admin123")
+        print("  • (create via VENDORA_BOOTSTRAP_ADMIN_EMAIL / VENDORA_BOOTSTRAP_ADMIN_PASSWORD)")
 
 if __name__ == '__main__':
     seed_data()

@@ -415,81 +415,45 @@ def checkout():
         use_primary = data.get('use_primary_address') == '1'
         delivery_address = data.get('delivery_address', '').strip()
         delivery_instructions = data.get('delivery_instructions', '')
-        delivery_latitude = data.get('delivery_latitude')
-        delivery_longitude = data.get('delivery_longitude')
         
-        # Validate delivery location coordinates
-        if delivery_latitude and delivery_longitude:
-            try:
-                delivery_lat = Decimal(str(delivery_latitude))
-                delivery_lon = Decimal(str(delivery_longitude))
-            except (ValueError, TypeError):
-                delivery_lat = None
-                delivery_lon = None
-        else:
-            delivery_lat = None
-            delivery_lon = None
+        # Enforce delivery range using the buyer's SAVED profile location (not device/current location).
+        buyer_lat = current_user.latitude
+        buyer_lon = current_user.longitude
+        if not buyer_lat or not buyer_lon:
+            error = "Please set your location coordinates in your profile before placing an order."
+            if request.is_json:
+                return jsonify({'success': False, 'error': error}), 400
+            flash(error, 'error')
+            return redirect(url_for('buyer.profile'))
         
-        # Validate distance from all vendors in cart
-        if delivery_lat and delivery_lon:
-            invalid_vendors = []
-            for vendor_id, items in cart.items():
-                vendor = Vendor.query.get(int(vendor_id))
-                if not vendor or vendor.status != 'APPROVED':
-                    continue
-                if vendor.latitude and vendor.longitude:
-                    distance = calculate_distance(
-                        float(delivery_lat), float(delivery_lon),
-                        float(vendor.latitude), float(vendor.longitude)
-                    )
-                    if distance > 1.0:  # More than 1 km
-                        invalid_vendors.append({
-                            'name': vendor.shop_name,
-                            'distance': round(distance, 2)
-                        })
+        invalid_vendors = []
+        for vendor_id, items in cart.items():
+            vendor = Vendor.query.get(int(vendor_id))
+            if not vendor or vendor.status != 'APPROVED':
+                continue
+            if not vendor.latitude or not vendor.longitude:
+                invalid_vendors.append({'name': vendor.shop_name, 'distance': None})
+                continue
             
-            if invalid_vendors:
-                vendor_list = ', '.join([v['name'] + f' ({v["distance"]} km)' for v in invalid_vendors])
-                error = f"Delivery location is too far from: {vendor_list}. Please select a location within 1 km from all vendors."
-                if request.is_json:
-                    return jsonify({'success': False, 'error': error}), 400
-                flash(error, 'error')
-                # Rebuild cart_items for error display
-                cart_items = []
-                total = Decimal('0.00')
-                for vendor_id, items in cart.items():
-                    vendor = Vendor.query.get(int(vendor_id))
-                    if not vendor or vendor.status != 'APPROVED':
-                        continue
-                    vendor_total = Decimal('0.00')
-                    vendor_items = []
-                    for item in items:
-                        product = Product.query.get(item['product_id'])
-                        if not product or not product.is_active:
-                            continue
-                        quantity = int(item['quantity'])
-                        item_total = Decimal(str(product.price)) * quantity
-                        vendor_total += item_total
-                        vendor_items.append({
-                            'product': product,
-                            'quantity': quantity,
-                            'total': item_total
-                        })
-                    if vendor_items:
-                        cart_items.append({
-                            'vendor': vendor,
-                            'cart_items': vendor_items,
-                            'subtotal': vendor_total
-                        })
-                        total += vendor_total
-                return render_template('buyer/checkout.html', 
-                                     cart_items=cart_items, 
-                                     total=total,
-                                     primary_address=current_user.primary_address or '')
-        else:
-            # No coordinates provided - warn but allow (for backward compatibility)
-            if not delivery_lat or not delivery_lon:
-                flash('Please select a delivery location on the map to ensure it\'s within delivery range.', 'warning')
+            distance = calculate_distance(
+                float(buyer_lat), float(buyer_lon),
+                float(vendor.latitude), float(vendor.longitude)
+            )
+            if distance is None or distance > 1.0:  # More than 1 km from buyer saved location
+                invalid_vendors.append({'name': vendor.shop_name, 'distance': distance})
+        
+        if invalid_vendors:
+            def fmt(v):
+                return v['name'] if v.get('distance') is None else f"{v['name']} ({round(v['distance'], 2)} km)"
+            vendor_list = ', '.join([fmt(v) for v in invalid_vendors])
+            error = (
+                f"Some vendors are out of delivery range from your saved location: {vendor_list}. "
+                "Please choose vendors within 1 km, or update your profile location."
+            )
+            if request.is_json:
+                return jsonify({'success': False, 'error': error}), 400
+            flash(error, 'error')
+            return redirect(url_for('buyer.cart'))
         
         # Use primary address if selected, otherwise use provided address
         if use_primary and current_user.primary_address:
@@ -588,13 +552,16 @@ def checkout():
         
         # #region agent log
         import json
-        with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
-            f.write(json.dumps({
-                'location': 'blueprints/buyer/routes.py:checkout:after_commit',
-                'message': 'Orders committed, about to send notifications',
-                'data': {'orders_count': len(orders_created), 'order_ids': [o.id for o in orders_created]},
-                'timestamp': __import__('time').time() * 1000
-            }) + '\n')
+        try:
+            with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({
+                    'location': 'blueprints/buyer/routes.py:checkout:after_commit',
+                    'message': 'Orders committed, about to send notifications',
+                    'data': {'orders_count': len(orders_created), 'order_ids': [o.id for o in orders_created]},
+                    'timestamp': __import__('time').time() * 1000
+                }) + '\n')
+        except Exception:
+            pass
         # #endregion
         
         # Send notifications to vendors using Africa's Talking
@@ -602,13 +569,16 @@ def checkout():
             try:
                 # #region agent log
                 import json as json_module
-                with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
-                    f.write(json_module.dumps({
-                        'location': 'blueprints/buyer/routes.py:checkout:before_notification',
-                        'message': 'About to notify vendor for order',
-                        'data': {'order_id': order.id, 'vendor_id': order.vendor_id},
-                        'timestamp': __import__('time').time() * 1000
-                    }) + '\n')
+                try:
+                    with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
+                        f.write(json_module.dumps({
+                            'location': 'blueprints/buyer/routes.py:checkout:before_notification',
+                            'message': 'About to notify vendor for order',
+                            'data': {'order_id': order.id, 'vendor_id': order.vendor_id},
+                            'timestamp': __import__('time').time() * 1000
+                        }) + '\n')
+                except Exception:
+                    pass
                 # #endregion
                 
                 # Import notification service
@@ -619,24 +589,30 @@ def checkout():
                 except ImportError as ie:
                     logging.error(f'Failed to import notification_service: {str(ie)}')
                     # #region agent log
-                    with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
-                        f.write(json_module.dumps({
-                            'location': 'blueprints/buyer/routes.py:checkout:import_error',
-                            'message': 'Failed to import notification_service',
-                            'data': {'order_id': order.id, 'error': str(ie)},
-                            'timestamp': __import__('time').time() * 1000
-                        }) + '\n')
+                    try:
+                        with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
+                            f.write(json_module.dumps({
+                                'location': 'blueprints/buyer/routes.py:checkout:import_error',
+                                'message': 'Failed to import notification_service',
+                                'data': {'order_id': order.id, 'error': str(ie)},
+                                'timestamp': __import__('time').time() * 1000
+                            }) + '\n')
+                    except Exception:
+                        pass
                     # #endregion
                     result = False
                 
                 # #region agent log
-                with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
-                    f.write(json_module.dumps({
-                        'location': 'blueprints/buyer/routes.py:checkout:after_notification',
-                        'message': 'Notification attempt completed',
-                        'data': {'order_id': order.id, 'result': result},
-                        'timestamp': __import__('time').time() * 1000
-                    }) + '\n')
+                try:
+                    with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
+                        f.write(json_module.dumps({
+                            'location': 'blueprints/buyer/routes.py:checkout:after_notification',
+                            'message': 'Notification attempt completed',
+                            'data': {'order_id': order.id, 'result': result},
+                            'timestamp': __import__('time').time() * 1000
+                        }) + '\n')
+                except Exception:
+                    pass
                 # #endregion
             except Exception as e:
                 # Don't fail the order if notification fails
@@ -644,13 +620,16 @@ def checkout():
                 # #region agent log
                 import json as json_module
                 import traceback
-                with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
-                    f.write(json_module.dumps({
-                        'location': 'blueprints/buyer/routes.py:checkout:notification_exception',
-                        'message': 'Exception during notification send',
-                        'data': {'order_id': order.id, 'error': str(e), 'traceback': traceback.format_exc()},
-                        'timestamp': __import__('time').time() * 1000
-                    }) + '\n')
+                try:
+                    with open('/Users/davidmigwi/VSCODE/Vendora/.cursor/debug.log', 'a') as f:
+                        f.write(json_module.dumps({
+                            'location': 'blueprints/buyer/routes.py:checkout:notification_exception',
+                            'message': 'Exception during notification send',
+                            'data': {'order_id': order.id, 'error': str(e), 'traceback': traceback.format_exc()},
+                            'timestamp': __import__('time').time() * 1000
+                        }) + '\n')
+                except Exception:
+                    pass
                 # #endregion
         
         clear_cart()

@@ -6,9 +6,10 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from functools import wraps
 from sqlalchemy import func
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from config import config
 from models import db, User, Vendor, Product, Category, Order, OrderItem
-from utils import get_vendors_within_radius, calculate_distance
+from utils import get_vendors_within_radius, calculate_distance, send_email_smtp
 from upload_utils import save_product_image, delete_product_image, allowed_file
 
 # Initialize Flask-Login
@@ -16,6 +17,10 @@ login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
+
+# Password reset token settings
+RESET_PASSWORD_TOKEN_SALT = 'vendora-reset-password'
+RESET_PASSWORD_TOKEN_MAX_AGE_SECONDS = 600  # 10 minutes
 
 # Session key for cart
 CART_SESSION_KEY = 'cart'
@@ -465,23 +470,110 @@ def create_app(config_name='default'):
                 return redirect(url_for('buyer.home'))
         
         return render_template('auth/select_role.html')
+
+    def _get_reset_serializer():
+        return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+    def _make_reset_token(user: User) -> str:
+        # Include password hash so tokens are invalidated after a password change.
+        return _get_reset_serializer().dumps(
+            {'uid': user.id, 'email': user.email, 'pwh': user.password_hash},
+            salt=RESET_PASSWORD_TOKEN_SALT
+        )
+
+    def _verify_reset_token(token: str):
+        try:
+            data = _get_reset_serializer().loads(
+                token,
+                salt=RESET_PASSWORD_TOKEN_SALT,
+                max_age=RESET_PASSWORD_TOKEN_MAX_AGE_SECONDS
+            )
+        except (BadSignature, SignatureExpired):
+            return None
+
+        user = User.query.get(int(data.get('uid'))) if data.get('uid') else None
+        if not user:
+            return None
+        if user.email != data.get('email'):
+            return None
+        if user.password_hash != data.get('pwh'):
+            return None
+        return user
+
+    def _external_url(endpoint: str, **values) -> str:
+        # Prefer forwarded proto (Apache proxy) so reset links use https in production.
+        scheme = request.headers.get('X-Forwarded-Proto') or ('https' if request.is_secure else 'http')
+        return url_for(endpoint, _external=True, _scheme=scheme, **values)
+
+    @app.route('/forgot-password', methods=['GET', 'POST'])
+    def forgot_password():
+        """Request a password reset link (always responds generically)."""
+        if request.method == 'POST':
+            email = (request.form.get('email') or '').strip().lower()
+
+            # Always show success to avoid account enumeration.
+            generic_msg = 'If an account exists for that email, we sent a password reset link (valid for 10 minutes).'
+
+            if email:
+                user = User.query.filter_by(email=email).first()
+                if user:
+                    token = _make_reset_token(user)
+                    reset_link = _external_url('reset_password', token=token)
+                    subject = 'Reset your Vendora password (valid for 10 minutes)'
+                    text = (
+                        "You requested a password reset for your Vendora account.\n\n"
+                        f"Reset your password using this link (valid for 10 minutes):\n{reset_link}\n\n"
+                        "If you did not request this, you can ignore this email."
+                    )
+                    try:
+                        send_email_smtp(
+                            to_email=user.email,
+                            subject=subject,
+                            text_body=text
+                        )
+                    except Exception:
+                        current_app.logger.exception('Failed to send password reset email')
+
+            flash(generic_msg, 'info')
+            return redirect(url_for('login'))
+
+        return render_template('auth/forgot_password.html')
+
+    @app.route('/reset-password/<token>', methods=['GET', 'POST'])
+    def reset_password(token):
+        """Reset password using a signed token (expires in 10 minutes)."""
+        user = _verify_reset_token(token)
+        if not user:
+            flash('This password reset link is invalid or has expired. Please request a new one.', 'error')
+            return redirect(url_for('forgot_password'))
+
+        if request.method == 'POST':
+            password = request.form.get('password') or ''
+            confirm = request.form.get('confirm_password') or ''
+
+            if len(password) < 8:
+                flash('Password must be at least 8 characters.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+            if password != confirm:
+                flash('Passwords do not match.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+
+            user.set_password(password)
+            db.session.commit()
+            flash('Your password has been reset. Please log in.', 'success')
+            return redirect(url_for('login'))
+
+        return render_template('auth/reset_password.html', token=token)
     
     @app.route('/logout')
-    @login_required
     def logout():
         """Logout - completely kill session and render landing page"""
-        # Logout the user first
-        logout_user()
-        # Completely clear all session data
+        # IMPORTANT: Clear session first, then call logout_user().
+        # Flask-Login uses the session to tell the response handler to clear the "remember me" cookie.
         session.clear()
-        # Also explicitly pop individual keys to ensure they're gone
-        for key in list(session.keys()):
-            session.pop(key, None)
-        # Force session to be regenerated on next request
-        session.permanent = False
+        logout_user()
         flash('You have been logged out successfully', 'info')
-        # Render landing page directly
-        return render_template('landing.html')
+        return redirect(url_for('landing'))
     
     # ============================================================================
     # ROOT ROUTE - Landing page
@@ -681,19 +773,33 @@ def create_app(config_name='default'):
     # Create database tables
     with app.app_context():
         db.create_all()
-        
-        # Create default admin user if it doesn't exist
-        admin = User.query.filter_by(email='admin@vendora.com').first()
-        if not admin:
-            admin = User(
-                name='Admin',
-                email='admin@vendora.com',
-                role='ADMIN'
-            )
-            admin.set_password('admin123')  # Change this in production!
-            db.session.add(admin)
-            db.session.commit()
-            print("Default admin created: admin@vendora.com / admin123")
+
+        # Optional: bootstrap (or reset) an admin user via env vars.
+        # This avoids hardcoding credentials in source control.
+        bootstrap_email = os.environ.get('VENDORA_BOOTSTRAP_ADMIN_EMAIL')
+        bootstrap_password = os.environ.get('VENDORA_BOOTSTRAP_ADMIN_PASSWORD')
+        bootstrap_name = os.environ.get('VENDORA_BOOTSTRAP_ADMIN_NAME', 'Admin')
+        bootstrap_reset = os.environ.get('VENDORA_BOOTSTRAP_ADMIN_RESET', '').lower() in ('1', 'true', 'yes')
+
+        if bootstrap_email and bootstrap_password:
+            admin = User.query.filter_by(email=bootstrap_email).first()
+            if admin is None:
+                admin = User(name=bootstrap_name, email=bootstrap_email, role='ADMIN')
+                db.session.add(admin)
+            elif bootstrap_reset:
+                admin.role = 'ADMIN'
+                if bootstrap_name and not admin.name:
+                    admin.name = bootstrap_name
+            else:
+                admin = None  # Do not modify existing admin unless reset flag is set
+
+            if admin is not None:
+                admin.set_password(bootstrap_password)
+                db.session.commit()
+                try:
+                    app.logger.warning("Bootstrapped admin user for %s (password not logged)", bootstrap_email)
+                except Exception:
+                    pass
     
     return app
 
@@ -702,7 +808,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f'\n🚀 Vendora is running!')
     print(f'📍 Server: http://localhost:{port}')
-    print(f'👤 Admin: admin@vendora.com / admin123')
+    print('👤 Admin: set VENDORA_BOOTSTRAP_ADMIN_EMAIL and VENDORA_BOOTSTRAP_ADMIN_PASSWORD to create/reset an admin')
     print(f'💾 Database: MySQL (VENDORA)')
     print(f'🐛 Debug Mode: ON')
     print(f'🔄 Auto-reload: ENABLED\n')

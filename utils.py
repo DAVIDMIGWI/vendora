@@ -1,6 +1,53 @@
 """Utility functions for Vendora"""
 import math
 from decimal import Decimal
+import os
+import smtplib
+import ssl
+from email.message import EmailMessage
+
+def send_email_smtp(to_email: str, subject: str, text_body: str, html_body: str | None = None):
+    """
+    Send an email using SMTP configured via environment variables.
+
+    Env vars:
+      - SMTP_HOST (required)
+      - SMTP_PORT (optional, default 587)
+      - SMTP_USERNAME (optional)
+      - SMTP_PASSWORD (optional)
+      - SMTP_USE_TLS (optional, default true)
+      - SMTP_FROM (optional, default SMTP_USERNAME)
+    """
+    host = os.environ.get('SMTP_HOST')
+    if not host:
+        raise RuntimeError('SMTP_HOST is not configured')
+
+    port = int(os.environ.get('SMTP_PORT', '587'))
+    username = os.environ.get('SMTP_USERNAME')
+    password = os.environ.get('SMTP_PASSWORD')
+    use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() in ('1', 'true', 'yes')
+    sender = os.environ.get('SMTP_FROM') or username
+    if not sender:
+        raise RuntimeError('SMTP_FROM or SMTP_USERNAME must be configured')
+
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['To'] = to_email
+    msg.set_content(text_body)
+    if html_body:
+        msg.add_alternative(html_body, subtype='html')
+
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP(host, port, timeout=15) as smtp:
+        smtp.ehlo()
+        if use_tls:
+            smtp.starttls(context=context)
+            smtp.ehlo()
+        if username and password:
+            smtp.login(username, password)
+        smtp.send_message(msg)
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """

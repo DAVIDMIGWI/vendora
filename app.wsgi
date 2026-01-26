@@ -7,7 +7,8 @@ sys.path.insert(0, '/var/www/vendora')
 
 # Set environment variables
 os.environ['FLASK_ENV'] = 'production'
-os.environ['DATABASE_URL'] = 'mysql+pymysql://vendora_user:Vendora2024@localhost/vendora'
+# IMPORTANT: Configure DATABASE_URL in your server environment (Apache/Nginx/Systemd/etc).
+# Do not hardcode credentials in source control.
 
 from app import create_app
 application = create_app('production')

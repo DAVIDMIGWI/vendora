@@ -74,28 +74,35 @@
             <input type="hidden" id="longitude" name="longitude"
                 value="{% if current_user.longitude %}{{ current_user.longitude }}{% endif %}">
 
-            <!-- Location Search Input -->
+            <!-- Map preview area (shows map if key is configured, otherwise shows the "key not configured" message) -->
             <div class="mb-3">
                 <label class="block text-gray-700 text-sm font-medium mb-2">Search Location</label>
                 <div class="relative">
-                    <input type="text" id="locationSearch"
+                    <input type="text" id="locationSearch" {% if not config.GOOGLE_MAPS_API_KEY %}disabled{% endif %}
                         placeholder="Search for a location (e.g., Westlands, Nairobi)..."
-                        class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent {% if not config.GOOGLE_MAPS_API_KEY %}bg-gray-100 text-gray-500{% endif %}">
                     <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Type to search and select from suggestions, or use the button
-                    below for current location</p>
+                <p class="text-xs text-gray-500 mt-1">
+                    {% if config.GOOGLE_MAPS_API_KEY %}
+                    Type to search and select from suggestions, or use the button below for current location
+                    {% else %}
+                    Maps are disabled because GOOGLE_MAPS_API_KEY is not configured. You can still set coordinates
+                    manually below.
+                    {% endif %}
+                </p>
             </div>
 
             <!-- Map container -->
             <div id="locationMap" class="w-full h-64 rounded-lg border border-gray-300 mb-2" style="z-index: 1;"></div>
 
-            <button type="button" onclick="getCurrentLocation(event)"
-                class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+            <button type="button" onclick="getCurrentLocation(event)" {% if not config.GOOGLE_MAPS_API_KEY %}disabled{%
+                endif %}
+                class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center {% if not config.GOOGLE_MAPS_API_KEY %}opacity-60 cursor-not-allowed{% endif %}">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -106,6 +113,27 @@
             </button>
             <p class="text-xs text-gray-500 mt-1">Click on the map or use current location to set coordinates. This is
                 saved permanently until you change it.</p>
+
+            {% if not config.GOOGLE_MAPS_API_KEY %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                <div>
+                    <label for="latitude_manual" class="block text-gray-700 text-sm font-medium mb-2">Latitude</label>
+                    <input type="number" step="0.00000001" id="latitude_manual"
+                        value="{% if current_user.latitude %}{{ current_user.latitude }}{% endif %}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        oninput="document.getElementById('latitude').value = this.value">
+                </div>
+                <div>
+                    <label for="longitude_manual" class="block text-gray-700 text-sm font-medium mb-2">Longitude</label>
+                    <input type="number" step="0.00000001" id="longitude_manual"
+                        value="{% if current_user.longitude %}{{ current_user.longitude }}{% endif %}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        oninput="document.getElementById('longitude').value = this.value">
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Tip: you can copy coordinates from Google Maps on your phone and paste
+                them here.</p>
+            {% endif %}
         </div>
 
         {% if current_user.primary_address %}
@@ -177,84 +205,84 @@
         }
 
         // Default to Nairobi center if no location set
-        const defaultLat = {% if current_user.latitude %}{{ current_user.latitude }}{% else %}-1.2921{% endif %};
-        const defaultLon = {% if current_user.longitude %}{{ current_user.longitude }}{% else %}36.8219{% endif %};
-        
-        const defaultLocation = { lat: defaultLat, lng: defaultLon };
-        
-        // Create map centered on user's location or Nairobi
-        map = new google.maps.Map(document.getElementById('locationMap'), {
-            center: defaultLocation,
-            zoom: defaultLat !== -1.2921 || defaultLon !== 36.8219 ? 15 : 13,
-            mapTypeControl: true,
-            streetViewControl: true,
-            fullscreenControl: true
+        const defaultLat = {% if current_user.latitude %} { { current_user.latitude } } {% else %} -1.2921{% endif %};
+    const defaultLon = {% if current_user.longitude %}{ { current_user.longitude } } {% else %} 36.8219{% endif %};
+
+    const defaultLocation = { lat: defaultLat, lng: defaultLon };
+
+    // Create map centered on user's location or Nairobi
+    map = new google.maps.Map(document.getElementById('locationMap'), {
+        center: defaultLocation,
+        zoom: defaultLat !== -1.2921 || defaultLon !== 36.8219 ? 15 : 13,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true
+    });
+
+    // Initialize Places Autocomplete
+    const searchInput = document.getElementById('locationSearch');
+    if (searchInput) {
+        const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+            fields: ['geometry', 'formatted_address', 'name']
         });
-        
-        // Initialize Places Autocomplete
-        const searchInput = document.getElementById('locationSearch');
-        if (searchInput) {
-            const autocomplete = new google.maps.places.Autocomplete(searchInput, {
-                fields: ['geometry', 'formatted_address', 'name']
-            });
-            
-            autocomplete.addListener('place_changed', function() {
-                const place = autocomplete.getPlace();
-                
-                if (!place.geometry || !place.geometry.location) {
-                    alert('No details available for this location');
-                    return;
-                }
-                
-                const location = {
-                    lat: place.geometry.location.lat(),
-                    lng: place.geometry.location.lng()
-                };
-                
-                // Update map center
-                map.setCenter(location);
-                map.setZoom(15);
-                
-                // Update hidden inputs
-                document.getElementById('latitude').value = location.lat.toFixed(8);
-                document.getElementById('longitude').value = location.lng.toFixed(8);
-                
-                // Update or create marker
-                if (marker) {
-                    marker.setPosition(location);
-                } else {
-                    marker = new google.maps.Marker({
-                        position: location,
-                        map: map,
-                        title: place.formatted_address || place.name,
-                        draggable: true
-                    });
 
-                    // Update inputs when marker is dragged
-                    marker.addListener('dragend', function () {
-                        const position = marker.getPosition();
-                        document.getElementById('latitude').value = position.lat().toFixed(8);
-                        document.getElementById('longitude').value = position.lng().toFixed(8);
-                    });
-                }
+        autocomplete.addListener('place_changed', function () {
+            const place = autocomplete.getPlace();
 
-                // Show info window
-                const infoWindow = new google.maps.InfoWindow({
-                    content: '<strong>' + (place.name || place.formatted_address) + '</strong><br>' +
-                        (place.formatted_address || '') +
-                        '<br><small style="color: #666;">Drag the marker to adjust</small>'
+            if (!place.geometry || !place.geometry.location) {
+                alert('No details available for this location');
+                return;
+            }
+
+            const location = {
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng()
+            };
+
+            // Update map center
+            map.setCenter(location);
+            map.setZoom(15);
+
+            // Update hidden inputs
+            document.getElementById('latitude').value = location.lat.toFixed(8);
+            document.getElementById('longitude').value = location.lng.toFixed(8);
+
+            // Update or create marker
+            if (marker) {
+                marker.setPosition(location);
+            } else {
+                marker = new google.maps.Marker({
+                    position: location,
+                    map: map,
+                    title: place.formatted_address || place.name,
+                    draggable: true
                 });
-                infoWindow.open(map, marker);
 
-                // Show notification that location will be saved
-                if (typeof showLocationSavedNotice === 'function') {
-                    showLocationSavedNotice();
-                }
+                // Update inputs when marker is dragged
+                marker.addListener('dragend', function () {
+                    const position = marker.getPosition();
+                    document.getElementById('latitude').value = position.lat().toFixed(8);
+                    document.getElementById('longitude').value = position.lng().toFixed(8);
+                });
+            }
+
+            // Show info window
+            const infoWindow = new google.maps.InfoWindow({
+                content: '<strong>' + (place.name || place.formatted_address) + '</strong><br>' +
+                    (place.formatted_address || '') +
+                    '<br><small style="color: #666;">Drag the marker to adjust</small>'
             });
-        }
+            infoWindow.open(map, marker);
 
-        // Add marker if location exists
-        if (defaultLat !== -1.2921 || defaultLon !== 36.8219) {
+            // Show notification that location will be saved
+            if (typeof showLocationSavedNotice === 'function') {
+                showLocationSavedNotice();
+            }
+        });
+    }
+
+    // Add marker if location exists
+    if (defaultLat !== -1.2921 || defaultLon !== 36.8219) {
         marker = new google.maps.Marker({
             position: defaultLocation,
             map: map,
@@ -282,10 +310,10 @@
             document.getElementById('latitude').value = position.lat().toFixed(8);
             document.getElementById('longitude').value = position.lng().toFixed(8);
         });
-        }
+    }
 
-        // Handle map click to set location
-        map.addListener('click', function (e) {
+    // Handle map click to set location
+    map.addListener('click', function (e) {
         const lat = e.latLng.lat();
         const lon = e.latLng.lng();
 
@@ -322,7 +350,7 @@
         if (typeof showLocationSavedNotice === 'function') {
             showLocationSavedNotice();
         }
-        });
+    });
         }
 
     function getCurrentLocation(event) {

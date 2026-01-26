@@ -1,8 +1,47 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify, session
+from flask import render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from models import db, User, Vendor
 from . import auth_bp
+from utils import send_email_smtp
+
+RESET_PASSWORD_TOKEN_SALT = 'vendora-reset-password'
+RESET_PASSWORD_TOKEN_MAX_AGE_SECONDS = 600  # 10 minutes
+
+def _get_reset_serializer():
+    return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+def _make_reset_token(user: User) -> str:
+    # Include password hash so tokens are invalidated after a password change.
+    return _get_reset_serializer().dumps(
+        {'uid': user.id, 'email': user.email, 'pwh': user.password_hash},
+        salt=RESET_PASSWORD_TOKEN_SALT
+    )
+
+def _verify_reset_token(token: str) -> User | None:
+    try:
+        data = _get_reset_serializer().loads(
+            token,
+            salt=RESET_PASSWORD_TOKEN_SALT,
+            max_age=RESET_PASSWORD_TOKEN_MAX_AGE_SECONDS
+        )
+    except (BadSignature, SignatureExpired):
+        return None
+
+    user = User.query.get(int(data.get('uid'))) if data.get('uid') else None
+    if not user:
+        return None
+    if user.email != data.get('email'):
+        return None
+    if user.password_hash != data.get('pwh'):
+        return None
+    return user
+
+def _external_url(endpoint: str, **values) -> str:
+    # Prefer forwarded proto (Apache proxy) so reset links use https in production.
+    scheme = request.headers.get('X-Forwarded-Proto') or ('https' if request.is_secure else 'http')
+    return url_for(endpoint, _external=True, _scheme=scheme, **values)
 
 @auth_bp.route('/register/buyer', methods=['GET', 'POST'])
 def register_buyer():
@@ -339,11 +378,72 @@ def select_role():
     
     return render_template('auth/select_role.html')
 
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Request a password reset link (always responds generically)."""
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+
+        # Always show success to avoid account enumeration.
+        generic_msg = 'If an account exists for that email, we sent a password reset link (valid for 10 minutes).'
+
+        if email:
+            user = User.query.filter_by(email=email).first()
+            if user:
+                token = _make_reset_token(user)
+                reset_link = _external_url('auth.reset_password', token=token)
+                subject = 'Reset your Vendora password (valid for 10 minutes)'
+                text = (
+                    "You requested a password reset for your Vendora account.\n\n"
+                    f"Reset your password using this link (valid for 10 minutes):\n{reset_link}\n\n"
+                    "If you did not request this, you can ignore this email."
+                )
+                try:
+                    send_email_smtp(
+                        to_email=user.email,
+                        subject=subject,
+                        text_body=text
+                    )
+                except Exception:
+                    # Don't leak email delivery problems to the user, but log for admins.
+                    current_app.logger.exception('Failed to send password reset email')
+
+        flash(generic_msg, 'info')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/forgot_password.html')
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """Reset password using a signed token (expires in 10 minutes)."""
+    user = _verify_reset_token(token)
+    if not user:
+        flash('This password reset link is invalid or has expired. Please request a new one.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password') or ''
+        confirm = request.form.get('confirm_password') or ''
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        if password != confirm:
+            flash('Passwords do not match.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+
+        user.set_password(password)
+        db.session.commit()
+        flash('Your password has been reset. Please log in.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password.html', token=token)
+
 @auth_bp.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    # Clear session first, then call logout_user() so Flask-Login can clear remember-cookie correctly.
     session.clear()  # Clear session including active_role
+    logout_user()
     flash('You have been logged out', 'info')
-    return render_template('landing.html')
+    return redirect(url_for('landing'))
 
