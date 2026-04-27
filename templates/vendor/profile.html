@@ -231,7 +231,10 @@
     // Initialize map - define function before loading Google Maps script
     function initMap() {
         {% if not config.GOOGLE_MAPS_API_KEY %}
-        // No API key - keep JS from failing (manual lat/lon fields are available in the form)
+        const mapDivNoKey = document.getElementById('locationMap');
+        if (mapDivNoKey) {
+            mapDivNoKey.innerHTML = '<div class="p-8 text-center text-gray-500"><p class="mb-2 font-medium">Map is unavailable</p><p class="text-sm">Set the <code class="text-xs bg-gray-100 px-1 rounded">GOOGLE_MAPS_API_KEY</code> environment variable and restart the app to enable the interactive map. You can still set coordinates using the fields below.</p></div>';
+        }
         return;
         {% endif %}
 
@@ -245,8 +248,8 @@
             return;
         }
         // Default to Nairobi center if no location set
-        const defaultLat = {% if vendor.latitude %} { { vendor.latitude } } {% else %} -1.2921{% endif %};
-    const defaultLon = {% if vendor.longitude %}{ { vendor.longitude } } {% else %} 36.8219{% endif %};
+        const defaultLat = {% if vendor.latitude %}{{ vendor.latitude }}{% else %}-1.2921{% endif %};
+        const defaultLon = {% if vendor.longitude %}{{ vendor.longitude }}{% else %}36.8219{% endif %};
 
     const defaultLocation = { lat: defaultLat, lng: defaultLon };
 
@@ -496,6 +499,8 @@
     }
 
     // Load Google Maps script after initMap is defined
+    window.initMap = initMap;
+
     {% if config.GOOGLE_MAPS_API_KEY %}
     (function () {
         const script = document.createElement('script');

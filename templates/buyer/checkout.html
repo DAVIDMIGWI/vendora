@@ -204,6 +204,7 @@
     ];
     
     let deliveryMap, deliveryMarker, vendorMarkers = [];
+    let deliveryMapReady = false;
     
     // Initialize delivery map
     function initDeliveryMap() {
@@ -226,6 +227,7 @@
             streetViewControl: true,
             fullscreenControl: true
         });
+        deliveryMapReady = true;
         
         // Add vendor markers
         vendorLocations.forEach(vendor => {
@@ -288,8 +290,10 @@
                 
                 // Update delivery location
                 setDeliveryLocation(location.lat, location.lng);
-                deliveryMap.setCenter(location);
-                deliveryMap.setZoom(15);
+                if (deliveryMap) {
+                    deliveryMap.setCenter(location);
+                    deliveryMap.setZoom(15);
+                }
             });
         }
         {% endif %}
@@ -299,30 +303,33 @@
         document.getElementById('delivery_latitude').value = lat.toFixed(8);
         document.getElementById('delivery_longitude').value = lng.toFixed(8);
         
-        // Update or create marker
-        if (deliveryMarker) {
-            deliveryMarker.setPosition({ lat: lat, lng: lng });
-        } else {
-            deliveryMarker = new google.maps.Marker({
-                position: { lat: lat, lng: lng },
-                map: deliveryMap,
-                title: 'Delivery location',
-                draggable: true,
-                icon: {
-                    path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-                    scale: 6,
-                    fillColor: '#EF4444',
-                    fillOpacity: 1,
-                    strokeColor: '#ffffff',
-                    strokeWeight: 2,
-                    rotation: 180
-                }
-            });
-            
-            deliveryMarker.addListener('dragend', function() {
-                const pos = deliveryMarker.getPosition();
-                setDeliveryLocation(pos.lat(), pos.lng());
-            });
+        // Update or create marker only when maps is initialized.
+        const hasGoogleMaps = typeof google !== 'undefined' && google.maps && deliveryMapReady;
+        if (hasGoogleMaps) {
+            if (deliveryMarker) {
+                deliveryMarker.setPosition({ lat: lat, lng: lng });
+            } else {
+                deliveryMarker = new google.maps.Marker({
+                    position: { lat: lat, lng: lng },
+                    map: deliveryMap,
+                    title: 'Delivery location',
+                    draggable: true,
+                    icon: {
+                        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                        scale: 6,
+                        fillColor: '#EF4444',
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 2,
+                        rotation: 180
+                    }
+                });
+                
+                deliveryMarker.addListener('dragend', function() {
+                    const pos = deliveryMarker.getPosition();
+                    setDeliveryLocation(pos.lat(), pos.lng());
+                });
+            }
         }
         
         // Validate distance
@@ -374,10 +381,28 @@
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     setDeliveryLocation(position.coords.latitude, position.coords.longitude);
-                    deliveryMap.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
-                    deliveryMap.setZoom(15);
+                    if (deliveryMap) {
+                        deliveryMap.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
+                        deliveryMap.setZoom(15);
+                    }
                 },
                 function(error) {
+                    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+                        alert('Location requires HTTPS (or localhost). Please select the delivery point on the map instead.');
+                        return;
+                    }
+                    if (error && error.code === 1) {
+                        alert('Location permission was denied. Please allow location access in your browser, or click on the map to set delivery location.');
+                        return;
+                    }
+                    if (error && error.code === 2) {
+                        alert('Location is unavailable right now. Please click on the map to set delivery location.');
+                        return;
+                    }
+                    if (error && error.code === 3) {
+                        alert('Location request timed out. Please click on the map to set delivery location.');
+                        return;
+                    }
                     alert('Unable to get your location. Please click on the map to set delivery location.');
                 }
             );

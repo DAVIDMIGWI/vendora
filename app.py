@@ -95,8 +95,21 @@ def load_user(user_id):
 
 def create_app(config_name='default'):
     """Application factory"""
+    from pathlib import Path
+    from dotenv import load_dotenv, dotenv_values
+
+    # Load .env from the app package directory (not cwd), and merge Maps key into app config.
+    # Class-based config reads os.environ only when config.py is first imported; reloading here
+    # fixes stale empty keys when .env was added later or the server process had no env.
+    _project_root = Path(__file__).resolve().parent
+    _env_file = _project_root / '.env'
+    load_dotenv(_env_file)
+    _env_from_file = dotenv_values(_env_file) if _env_file.is_file() else {}
+
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+    _maps_key = (os.environ.get('GOOGLE_MAPS_API_KEY') or (_env_from_file.get('GOOGLE_MAPS_API_KEY') or '')).strip()
+    app.config['GOOGLE_MAPS_API_KEY'] = _maps_key
     
     # Ensure upload folder exists
     upload_folder = app.config.get('UPLOAD_FOLDER')

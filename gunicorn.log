@@ -1,0 +1,13 @@
+[2026-01-25 14:29:19 +0000] [869837] [INFO] Starting gunicorn 23.0.0
+[2026-01-25 14:29:19 +0000] [869837] [INFO] Listening at: http://127.0.0.1:5000 (869837)
+[2026-01-25 14:29:19 +0000] [869837] [INFO] Using worker: sync
+[2026-01-25 14:29:19 +0000] [869838] [INFO] Booting worker with pid: 869838
+[2026-01-25 14:29:19 +0000] [869839] [INFO] Booting worker with pid: 869839
+[2026-01-25 14:29:19 +0000] [869842] [INFO] Booting worker with pid: 869842
+[2026-01-25 14:29:19 +0000] [869856] [INFO] Booting worker with pid: 869856
+[2026-01-25 14:40:40 +0000] [869837] [INFO] Handling signal: term
+[2026-01-25 14:40:40 +0000] [869838] [INFO] Worker exiting (pid: 869838)
+[2026-01-25 14:40:40 +0000] [869856] [INFO] Worker exiting (pid: 869856)
+[2026-01-25 14:40:40 +0000] [869842] [INFO] Worker exiting (pid: 869842)
+[2026-01-25 14:40:40 +0000] [869839] [INFO] Worker exiting (pid: 869839)
+[2026-01-25 14:40:40 +0000] [869837] [INFO] Shutting down: Master

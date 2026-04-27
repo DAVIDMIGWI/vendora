@@ -205,8 +205,8 @@
         }
 
         // Default to Nairobi center if no location set
-        const defaultLat = {% if current_user.latitude %} { { current_user.latitude } } {% else %} -1.2921{% endif %};
-    const defaultLon = {% if current_user.longitude %}{ { current_user.longitude } } {% else %} 36.8219{% endif %};
+        const defaultLat = {% if current_user.latitude %}{{ current_user.latitude }}{% else %}-1.2921{% endif %};
+        const defaultLon = {% if current_user.longitude %}{{ current_user.longitude }}{% else %}36.8219{% endif %};
 
     const defaultLocation = { lat: defaultLat, lng: defaultLon };
 
